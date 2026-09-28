@@ -1,12 +1,9 @@
 package com.gymlog.app.data.model
 
-/**
- * Representa a un usuario de la aplicación.
- *
- * El uid es el identificador único que genera Firebase.
- * usernameLower es la version de username en minúsculas
- * para poder realizar búsquedas insensibles a mayúsculas y minúsculas en Firestore.
- */
+ // Clase que representa a un usuario de la aplicación.
+ // El uid es el identificador único que genera Firebase.
+ // usernameLower es la version de username en minúsculas
+ // para poder realizar búsquedas insensibles a mayúsculas y minúsculas en Firestore.
 
 data class User(
     val uid: String = "",
