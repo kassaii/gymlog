@@ -6,9 +6,15 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Card
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
@@ -30,15 +36,14 @@ fun WorkoutCard(
     weightUnit: String,
     modifier: Modifier = Modifier
 ) {
-    // Uso de card permite mejor estructura. Añade separación entre tarjetas.
     Card(modifier = modifier.fillMaxWidth()) {
         Column(modifier = Modifier.padding(vertical = 10.dp, horizontal = 14.dp)) {
 
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // Imagen
+                // Image
 
                 Column() {
-                    // Nombre de usuario
+                    // Username
                     Text(
                         text = workout.username,
                         style = MaterialTheme.typography.titleMedium
@@ -46,7 +51,7 @@ fun WorkoutCard(
 
                     Spacer(Modifier.height(4.dp))
 
-                    // Fecha y hora
+                    // Date - Hour
                     Text(
                         text = DateFormatter.formatDateTime(workout.date),
                         style = MaterialTheme.typography.bodySmall,
@@ -62,7 +67,7 @@ fun WorkoutCard(
 
             Spacer(Modifier.height(6.dp))
 
-            // Título del entrenamiento
+            // Title
             Text(
                 text = workout.title,
                 style = MaterialTheme.typography.titleMedium,
@@ -71,28 +76,56 @@ fun WorkoutCard(
 
             Spacer(Modifier.height(8.dp))
 
-            // Row con datos
+            // Data row
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.height(20.dp)
             ) {
 
-                Text("⏲\uFE0F ${workout.durationMinutes} min")
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.Timer,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("${workout.durationMinutes} min")
+                }
+
                 Spacer(Modifier.width(8.dp))
                 VerticalDivider()
                 Spacer(Modifier.width(8.dp))
-                Text("\uD83C\uDFCB\uFE0F ${WeightFormatter.format(workout.totalVolume, weightUnit)}")
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.FitnessCenter,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text(WeightFormatter.format(workout.totalVolume, weightUnit))
+                }
+
                 Spacer(Modifier.width(8.dp))
                 VerticalDivider()
                 Spacer(Modifier.width(8.dp))
-                Text("\uD83C\uDFAF ${workout.totalSets} series")
+
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        imageVector = Icons.Default.List,
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp)
+                    )
+                    Spacer(modifier = Modifier.width(4.dp))
+                    Text("${workout.totalSets} series")
+                }
             }
 
             Spacer(Modifier.height(8.dp))
             HorizontalDivider()
             Spacer(Modifier.height(2.dp))
 
-            // Ejercicios
+            // Exercises
             workout.exercises.take(3).forEach { exercise ->
                 Row(
                     modifier = Modifier
@@ -100,7 +133,7 @@ fun WorkoutCard(
                         .padding(vertical = 5.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Imagen del ejercicio
+                    // Image
 
                     Text(
                         text = "${exercise.sets.size} series",

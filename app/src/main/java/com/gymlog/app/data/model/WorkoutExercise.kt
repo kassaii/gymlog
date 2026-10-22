@@ -1,6 +1,6 @@
 package com.gymlog.app.data.model
 
-// Clase que representa un ejercicio dentro de un entrenamiento.
+// Class representing an exercise within a workout
 data class WorkoutExercise(
     val exerciseId: String = "",
     val exerciseName: String = "",

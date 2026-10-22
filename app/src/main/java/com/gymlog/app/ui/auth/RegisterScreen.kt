@@ -36,7 +36,7 @@ fun RegisterScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Título
+        // Title
         Text(
             text = "¡Regístrate!",
             style = MaterialTheme.typography.headlineMedium
@@ -44,7 +44,7 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Campo username
+        // Username field
         TextField(
             value = state.username,
             onValueChange = viewModel::onUsernameChange,
@@ -56,7 +56,7 @@ fun RegisterScreen(
         Spacer(modifier = Modifier.height(16.dp))
 
 
-        // Campo email
+        // Email field
         TextField(
             value = state.email,
             onValueChange = viewModel::onEmailChange,
@@ -67,7 +67,7 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Campo contraseña
+        // Password field
         TextField(
             value = state.password,
             onValueChange = viewModel::onPasswordChange,
@@ -79,7 +79,7 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Botón registro
+        // Register button
         Button(
             onClick = viewModel::onRegisterClicked,
             enabled = !state.isLoading,
@@ -88,13 +88,13 @@ fun RegisterScreen(
             Text("Registrarse")
         }
 
-        // Spinner de carga
+        // Loading spinner
         if (state.isLoading) {
             Spacer(modifier = Modifier.height(16.dp))
             CircularProgressIndicator()
         }
 
-        // Mensaje de error
+        // Error message
         state.error?.let { mensaje ->
             Spacer(modifier = Modifier.height(16.dp))
             Text(
@@ -105,7 +105,7 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Enlace a login
+        // Login link
         TextButton(onClick = { /* Login */ }) {
             Text("¿Ya tienes una cuenta? Inicia sesión")
         }

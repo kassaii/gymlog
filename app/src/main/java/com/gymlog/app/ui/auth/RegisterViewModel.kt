@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-// Estado de la pantalla de register.
+// Register screen state
 data class RegisterUiState(
     val email: String = "",
     val password: String = "",
@@ -19,17 +19,17 @@ data class RegisterUiState(
     val registerSuccess: Boolean = false
 )
 
-// ViewModel de la pantalla de register.
+// Register screen ViewModel
 class RegisterViewModel : ViewModel() {
 
     private val authRepository = AuthRepository()
 
 
-    // Estado interno (mutable y privado). Solo el ViewModel puede modificarlo.
+    // Internal state (mutable and private). Only the ViewModel can modify it
     private val _state = MutableStateFlow(RegisterUiState())
 
-    // Estado expuesto (inmutable y público). La Screen solo puede leerlo.
-    // El patrón evita que la Screen modifique el estado del ViewModel por error.
+    // Exposed state (immutable and public). The Screen can only read it
+    // The pattern prevents the Screen from modifying the ViewModel's state by mistake
     val state: StateFlow<RegisterUiState> = _state.asStateFlow()
 
     fun onEmailChange(email: String) {
@@ -49,7 +49,7 @@ class RegisterViewModel : ViewModel() {
         val password = _state.value.password
         val username = _state.value.username
 
-        // Validaciones extra
+        // Extra validations
         if (email.isBlank()) {
             _state.update { it.copy(error = "El email no puede estar vacío") }
             return
@@ -72,14 +72,14 @@ class RegisterViewModel : ViewModel() {
 
         viewModelScope.launch {
 
-            // Indicar que está cargando y limpiar error previo.
+            // Set loading to true and clear previous error
             _state.update { it.copy(isLoading = true, error = null) }
 
-            // Llamar al repositorio.
+            // Call the repository
             val result = authRepository.register(email, password, username)
 
-            // Gestionar el resultado.
-            // Fold maneja éxito y fracaso.
+            // Handle the result
+            // Fold handles both success and failure
             result.fold(
                 onSuccess = { _state.update { it.copy(isLoading = false, registerSuccess = true) } },
                 onFailure = { error -> _state.update { it.copy(isLoading = false, error = error.message) } }

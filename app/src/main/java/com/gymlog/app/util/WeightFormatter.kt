@@ -8,12 +8,13 @@ object WeightFormatter {
 
     fun lbToKg(lb: Double): Double = lb / KG_to_LB
 
-    // Convierte un peso (kg) a la unidad del usuario y le da formato.
+    // Converts a weight (kg) to the user's unit and formats it
     fun format(weightInKg: Double, unit: String): String {
-        return if (unit == "kg") {
-            "${"%.1f".format(weightInKg)} kg"
+        val value = if (unit == "kg") weightInKg else kgToLb(weightInKg)
+        return if (value == value.toInt().toDouble()) {
+            "${value.toInt()} $unit"
         } else {
-            "${"%.1f".format(kgToLb(weightInKg))} lb"
+            "${"%.1f".format(value)} $unit"
         }
     }
 }

@@ -1,6 +1,6 @@
 package com.gymlog.app.data.model
 
-// Representa un entrenamiento.
+// Represents a workout
 data class Workout(
     val id: String = "",
     val userId: String = "",

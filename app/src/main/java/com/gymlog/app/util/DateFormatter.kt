@@ -6,7 +6,7 @@ import java.util.Locale
 
 object DateFormatter {
 
-    // Da formato un timestamp (long) a "26/09/2026 · 18:30"
+    // Formats a timestamp (long) to "26/09/2026 · 18:30"
     fun formatDateTime(timestamp: Long): String {
         val date = Date(timestamp)
         val format = SimpleDateFormat("dd/MM/yyyy · HH:mm", Locale.getDefault())

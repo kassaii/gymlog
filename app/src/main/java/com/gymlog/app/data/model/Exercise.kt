@@ -1,6 +1,6 @@
 package com.gymlog.app.data.model
 
-// Representa un ejercicio de la biblioteca.
+// Represents an exercise from the library
 data class Exercise(
     val id: String = "",
     val name: String = "",

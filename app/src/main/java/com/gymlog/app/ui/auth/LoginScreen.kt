@@ -36,7 +36,7 @@ fun LoginScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Título
+        // Title
         Text(
             text = "Iniciar sesión",
             style = MaterialTheme.typography.headlineMedium
@@ -44,7 +44,7 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Campo email
+        // Email field
         TextField(
             value = state.email,
             onValueChange = viewModel::onEmailChange,
@@ -55,7 +55,7 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Campo contraseña
+        // Password field
         TextField(
             value = state.password,
             onValueChange = viewModel::onPasswordChange,
@@ -67,7 +67,7 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Botón login
+        // Login button
         Button(
             onClick = viewModel::onLoginClicked,
             enabled = !state.isLoading,
@@ -76,13 +76,13 @@ fun LoginScreen(
             Text("Entrar")
         }
 
-        // Spinner de carga
+        // Loading spinner
         if (state.isLoading) {
             Spacer(modifier = Modifier.height(16.dp))
             CircularProgressIndicator()
         }
 
-        // Mensaje de error
+        // Error message
         state.error?.let { mensaje ->
             Spacer(modifier = Modifier.height(16.dp))
             Text(
@@ -93,7 +93,7 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Enlace a registro
+        // Register link
         TextButton(onClick = { /* Register */ }) {
             Text("¿No tienes cuenta? Regístrate")
         }

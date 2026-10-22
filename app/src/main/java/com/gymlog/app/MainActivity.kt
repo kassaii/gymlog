@@ -13,7 +13,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import com.gymlog.app.ui.auth.LoginScreen
 import com.gymlog.app.ui.auth.RegisterScreen
+import com.gymlog.app.ui.feed.explore.ExploreFeedScreen
 import com.gymlog.app.ui.theme.GymTheme
+import com.gymlog.app.ui.workout.CreateWorkoutScreen
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -21,7 +23,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             GymTheme {
-                RegisterScreen()
+                CreateWorkoutScreen()
             }
         }
     }
