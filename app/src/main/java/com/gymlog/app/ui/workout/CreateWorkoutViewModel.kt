@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 data class CreateWorkoutUiState(
     val title: String = "",
@@ -22,7 +23,17 @@ data class CreateWorkoutUiState(
     val isLoading: Boolean = false,
     val error: String? = null,
     val saveSuccess: Boolean = false,
-    val discardSuccess: Boolean = false
+    val discardSuccess: Boolean = false,
+
+    // Dialog and exercises state
+    val isExerciseDialogVisible: Boolean = false,
+    val isLoadingExercises: Boolean = false,
+    val availableExercises: List<Exercise> = emptyList(),
+    val selectedExerciseIds: Set<String> = emptySet(),
+
+    // Filters for the dialog
+    val searchQuery: String = "",
+    val selectedMuscleGroup: String? = null
 )
 
 class CreateWorkoutViewModel : ViewModel() {
@@ -35,12 +46,28 @@ class CreateWorkoutViewModel : ViewModel() {
 
     init {
         startTimer()
+        loadExercises()
+    }
+
+    // Load exercises from Firestore once
+    private fun loadExercises() {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoadingExercises = true) }
+            workoutRepository.getExercises().fold(
+                onSuccess = { exercises ->
+                    _state.update { it.copy(availableExercises = exercises, isLoadingExercises = false) }
+                },
+                onFailure = { error ->
+                    _state.update { it.copy(error = error.message, isLoadingExercises = false) }
+                }
+            )
+        }
     }
 
     private fun startTimer() {
         viewModelScope.launch {
             while (true) {
-                delay(1000)
+                delay(1000.milliseconds)
                 if (_state.value.isTimerRunning) {
                     _state.update { it.copy(elapsedSeconds = it.elapsedSeconds + 1) }
                 }
@@ -63,16 +90,65 @@ class CreateWorkoutViewModel : ViewModel() {
         _state.update { it.copy(title = title) }
     }
 
-    // Add exercise from library
-    fun onAddExercise(exercise: Exercise) {
-        val workoutExercise = WorkoutExercise(
-            exerciseId = exercise.id,
-            exerciseName = exercise.name,
-            exercisePhotoUrl = exercise.photoUrl,
-            sets = emptyList()
-        )
+    // Open/Close dialog
+    fun onShowExerciseDialog(show: Boolean) {
         _state.update {
-            it.copy(exercises = it.exercises + workoutExercise)
+            it.copy(
+                isExerciseDialogVisible = show,
+                // Clear selection and filters when opening/closing
+                selectedExerciseIds = emptySet(),
+                searchQuery = "",
+                selectedMuscleGroup = null
+            )
+        }
+    }
+
+    // Handle selection of an exercise
+    fun onToggleExerciseSelection(exerciseId: String) {
+        _state.update { currentState ->
+            val currentSelection = currentState.selectedExerciseIds
+            val newSelection = if (currentSelection.contains(exerciseId)) {
+                currentSelection - exerciseId
+            } else {
+                currentSelection + exerciseId
+            }
+            currentState.copy(selectedExerciseIds = newSelection)
+        }
+    }
+
+    // Handle search query change
+    fun onSearchQueryChange(query: String) {
+        _state.update { it.copy(searchQuery = query) }
+    }
+
+    // Handle muscle group filter change
+    fun onMuscleGroupFilterChange(muscleGroup: String?) {
+        _state.update { it.copy(selectedMuscleGroup = muscleGroup) }
+    }
+
+    // Confirm selection and add to workout
+    fun onConfirmAddExercises() {
+        val currentState = _state.value
+        // Filter the available exercises to get the full objects of the selected ones
+        val exercisesToAdd = currentState.availableExercises.filter {
+            currentState.selectedExerciseIds.contains(it.id)
+        }
+
+        // Add them to the current workout
+        val newWorkoutExercises = exercisesToAdd.map { exercise ->
+            WorkoutExercise(
+                exerciseId = exercise.id,
+                exerciseName = exercise.name,
+                exercisePhotoUrl = exercise.photoUrl,
+                sets = emptyList()
+            )
+        }
+
+        _state.update {
+            it.copy(
+                exercises = it.exercises + newWorkoutExercises,
+                isExerciseDialogVisible = false // Close dialog
+            )
         }
     }
 

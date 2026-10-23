@@ -2,7 +2,7 @@ package com.gymlog.app.ui.workout
 
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
@@ -32,13 +32,11 @@ fun CreateWorkoutScreen(
             TopAppBar(
                 title = { Text("Crear entrenamiento") },
                 navigationIcon = {
-                    // Dismiss button
                     IconButton(onClick = { viewModel.onDiscardWorkout() }) {
                         Icon(Icons.Default.Close, contentDescription = "Descartar")
                     }
                 },
                 actions = {
-                    // Finish button
                     IconButton(
                         onClick = { viewModel.onFinishWorkout() },
                         enabled = !state.isLoading
@@ -47,14 +45,44 @@ fun CreateWorkoutScreen(
                     }
                 }
             )
+        },
+        bottomBar = {
+            Surface(
+                shadowElevation = 8.dp,
+                color = MaterialTheme.colorScheme.surface
+            ) {
+                Button(
+                    onClick = { viewModel.onFinishWorkout() },
+                    enabled = !state.isLoading && state.exercises.isNotEmpty(),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp)
+                        .height(56.dp)
+                        .imePadding(),
+                    shape = MaterialTheme.shapes.medium
+                ) {
+                    if (state.isLoading) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(24.dp),
+                            color = MaterialTheme.colorScheme.onPrimary
+                        )
+                    } else {
+                        Text(
+                            text = "Finalizar entrenamiento",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+                }
+            }
         }
     ) { paddingValues ->
         LazyColumn(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp)
+                .padding(horizontal = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
+            contentPadding = PaddingValues(top = 16.dp, bottom = 16.dp)
         ) {
             // Title
             item {
@@ -102,7 +130,7 @@ fun CreateWorkoutScreen(
             // Add exercise button
             item {
                 Button(
-                    onClick = { },
+                    onClick = { viewModel.onShowExerciseDialog(true) },
                     modifier = Modifier.fillMaxWidth()
                 ) {
                     Icon(Icons.Default.Add, contentDescription = null)
@@ -110,6 +138,36 @@ fun CreateWorkoutScreen(
                     Text("Añadir ejercicio")
                 }
             }
+
+            // Workout Exercises List
+            itemsIndexed(state.exercises) { index, exercise ->
+                WorkoutExerciseCard(
+                    exercise = exercise,
+                    exerciseIndex = index,
+                    onRemoveExercise = { viewModel.onRemoveExercise(index) },
+                    onAddSet = { viewModel.onAddSet(index) },
+                    onRemoveSet = { setIndex -> viewModel.onRemoveSet(index, setIndex) },
+                    onSetChange = { setIndex, reps, weight ->
+                        viewModel.onSetChange(index, setIndex, reps, weight)
+                    }
+                )
+            }
+        }
+
+        // Exercise selection dialog
+        if (state.isExerciseDialogVisible) {
+            ExerciseSelectionDialog(
+                exercises = state.availableExercises,
+                selectedIds = state.selectedExerciseIds,
+                searchQuery = state.searchQuery,
+                selectedMuscleGroup = state.selectedMuscleGroup,
+                isLoading = state.isLoadingExercises,
+                onSearchQueryChange = viewModel::onSearchQueryChange,
+                onMuscleGroupSelect = viewModel::onMuscleGroupFilterChange,
+                onToggleSelection = viewModel::onToggleExerciseSelection,
+                onConfirm = viewModel::onConfirmAddExercises,
+                onDismiss = { viewModel.onShowExerciseDialog(false) }
+            )
         }
     }
 }

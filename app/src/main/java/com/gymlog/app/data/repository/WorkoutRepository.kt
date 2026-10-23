@@ -1,6 +1,7 @@
 package com.gymlog.app.data.repository
 
 import com.google.firebase.firestore.FirebaseFirestore
+import com.gymlog.app.data.model.Exercise
 import com.gymlog.app.data.model.Workout
 import com.gymlog.app.data.model.WorkoutExercise
 import kotlinx.coroutines.tasks.await
@@ -45,6 +46,21 @@ class WorkoutRepository {
 
             Result.success(savedWorkout)
 
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    suspend fun getExercises(): Result<List<Exercise>> {
+        return try {
+            val snapshot = firestore.collection("exercises").get().await()
+
+            val exercises = snapshot.documents.mapNotNull { doc ->
+                doc.toObject(Exercise::class.java)?.copy(id = doc.id)
+            }
+
+            val sortedExercises = exercises.sortedBy { it.name }
+            Result.success(sortedExercises)
         } catch (e: Exception) {
             Result.failure(e)
         }

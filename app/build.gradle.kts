@@ -7,7 +7,7 @@ plugins {
 android {
     namespace = "com.gymlog.app"
     compileSdk {
-        version = release(36) {
+        version = release(37) {
             minorApiLevel = 1
         }
     }
@@ -47,6 +47,7 @@ dependencies {
     implementation(libs.androidx.compose.ui.tooling.preview)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.lifecycle.runtime.ktx)
+    implementation(libs.androidx.ui)
 
     implementation(platform("com.google.firebase:firebase-bom:33.5.1"))
     implementation("com.google.firebase:firebase-auth-ktx")
@@ -58,6 +59,8 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
 
     implementation("androidx.compose.material:material-icons-extended")
+
+    implementation("io.coil-kt:coil-compose:2.6.0")
 
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
