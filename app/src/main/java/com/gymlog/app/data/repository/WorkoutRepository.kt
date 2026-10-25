@@ -20,9 +20,11 @@ class WorkoutRepository {
         username: String,
         userPhotoUrl: String,
         title: String,
+        description: String,
         durationMinutes: Int,
         totalVolume: Double,
         totalSets: Int,
+        progressCount: Int,
         exercises: List<WorkoutExercise>
     ): Result<Workout> {
         return try {
@@ -31,17 +33,17 @@ class WorkoutRepository {
                 username = username,
                 userPhotoUrl = userPhotoUrl,
                 title = title,
+                description = description,
                 date = System.currentTimeMillis(),
                 durationMinutes = durationMinutes,
                 totalVolume = totalVolume,
                 totalSets = totalSets,
+                progressCount = progressCount,
                 exercises = exercises
             )
 
-            // Add the document
             val docRef = workoutsCollection.add(workout).await()
 
-            // Workout with the generated ID
             val savedWorkout = workout.copy(id = docRef.id)
 
             Result.success(savedWorkout)

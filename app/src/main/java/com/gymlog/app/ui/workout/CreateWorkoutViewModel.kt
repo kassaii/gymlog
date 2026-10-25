@@ -17,6 +17,7 @@ import kotlin.time.Duration.Companion.milliseconds
 
 data class CreateWorkoutUiState(
     val title: String = "",
+    val description: String = "",
     val exercises: List<WorkoutExercise> = emptyList(),
     val elapsedSeconds: Int = 0,
     val isTimerRunning: Boolean = true,
@@ -24,16 +25,17 @@ data class CreateWorkoutUiState(
     val error: String? = null,
     val saveSuccess: Boolean = false,
     val discardSuccess: Boolean = false,
+    val progressCount: Int = 0,
 
-    // Dialog and exercises state
     val isExerciseDialogVisible: Boolean = false,
     val isLoadingExercises: Boolean = false,
     val availableExercises: List<Exercise> = emptyList(),
     val selectedExerciseIds: Set<String> = emptySet(),
 
-    // Filters for the dialog
     val searchQuery: String = "",
-    val selectedMuscleGroup: String? = null
+    val selectedMuscleGroup: String? = null,
+
+    val expandedSet: Pair<Int, Int>? = null
 )
 
 class CreateWorkoutViewModel : ViewModel() {
@@ -49,7 +51,7 @@ class CreateWorkoutViewModel : ViewModel() {
         loadExercises()
     }
 
-    // Load exercises from Firestore once
+    // Load exercises from Firestore
     private fun loadExercises() {
         viewModelScope.launch {
             _state.update { it.copy(isLoadingExercises = true) }
@@ -75,27 +77,37 @@ class CreateWorkoutViewModel : ViewModel() {
         }
     }
 
-    // Pause timer
     fun onPauseTimer() {
         _state.update { it.copy(isTimerRunning = false) }
     }
 
-    // Resume timer
     fun onResumeTimer() {
         _state.update { it.copy(isTimerRunning = true) }
     }
 
-    // Change workout title
     fun onTitleChange(title: String) {
         _state.update { it.copy(title = title) }
     }
 
-    // Open/Close dialog
+    fun onDescriptionChange(description: String) {
+        _state.update { it.copy(description = description) }
+    }
+
+    fun onToggleSetExpansion(exerciseIndex: Int, setIndex: Int) {
+        _state.update { currentState ->
+            val current = currentState.expandedSet
+            if (current != null && current.first == exerciseIndex && current.second == setIndex) {
+                currentState.copy(expandedSet = null)
+            } else {
+                currentState.copy(expandedSet = exerciseIndex to setIndex)
+            }
+        }
+    }
+
     fun onShowExerciseDialog(show: Boolean) {
         _state.update {
             it.copy(
                 isExerciseDialogVisible = show,
-                // Clear selection and filters when opening/closing
                 selectedExerciseIds = emptySet(),
                 searchQuery = "",
                 selectedMuscleGroup = null
@@ -103,7 +115,6 @@ class CreateWorkoutViewModel : ViewModel() {
         }
     }
 
-    // Handle selection of an exercise
     fun onToggleExerciseSelection(exerciseId: String) {
         _state.update { currentState ->
             val currentSelection = currentState.selectedExerciseIds
@@ -116,25 +127,20 @@ class CreateWorkoutViewModel : ViewModel() {
         }
     }
 
-    // Handle search query change
     fun onSearchQueryChange(query: String) {
         _state.update { it.copy(searchQuery = query) }
     }
 
-    // Handle muscle group filter change
     fun onMuscleGroupFilterChange(muscleGroup: String?) {
         _state.update { it.copy(selectedMuscleGroup = muscleGroup) }
     }
 
-    // Confirm selection and add to workout
     fun onConfirmAddExercises() {
         val currentState = _state.value
-        // Filter the available exercises to get the full objects of the selected ones
         val exercisesToAdd = currentState.availableExercises.filter {
             currentState.selectedExerciseIds.contains(it.id)
         }
 
-        // Add them to the current workout
         val newWorkoutExercises = exercisesToAdd.map { exercise ->
             WorkoutExercise(
                 exerciseId = exercise.id,
@@ -146,23 +152,27 @@ class CreateWorkoutViewModel : ViewModel() {
         }
 
         _state.update {
+            val firstNewExerciseIndex = it.exercises.size
             it.copy(
                 exercises = it.exercises + newWorkoutExercises,
-                isExerciseDialogVisible = false // Close dialog
+                isExerciseDialogVisible = false,
+                expandedSet = if (newWorkoutExercises.isNotEmpty()) {
+                    firstNewExerciseIndex to 0
+                } else {
+                    it.expandedSet
+                }
             )
         }
     }
 
-    // Remove exercise from workout
     fun onRemoveExercise(exerciseIndex: Int) {
-        _state.update {
-            it.copy(
-                exercises = it.exercises.filterIndexed { i, _ -> i != exerciseIndex }
-            )
+        _state.update { currentState ->
+            val newExercises = currentState.exercises.filterIndexed { i, _ -> i != exerciseIndex }
+            val newExpanded = if (currentState.expandedSet?.first == exerciseIndex) null else currentState.expandedSet
+            currentState.copy(exercises = newExercises, expandedSet = newExpanded)
         }
     }
 
-    // Move exercise up or down
     fun onMoveExercise(fromIndex: Int, toIndex: Int) {
         _state.update { currentState ->
             val exercises = currentState.exercises.toMutableList()
@@ -170,59 +180,70 @@ class CreateWorkoutViewModel : ViewModel() {
                 val item = exercises.removeAt(fromIndex)
                 exercises.add(toIndex, item)
             }
-            currentState.copy(exercises = exercises)
+            val newExpanded = currentState.expandedSet?.let { (ex, set) ->
+                when {
+                    ex == fromIndex -> toIndex to set
+                    ex == toIndex -> fromIndex to set
+                    else -> ex to set
+                }
+            }
+            currentState.copy(exercises = exercises, expandedSet = newExpanded)
         }
     }
 
-
-    // Add empty set to exercise
     fun onAddSet(exerciseIndex: Int) {
         _state.update {
             val updated = it.exercises.toMutableList()
             val exercise = updated[exerciseIndex]
+            val newSetIndex = exercise.sets.size
             updated[exerciseIndex] = exercise.copy(
                 sets = exercise.sets + ExerciseSet(reps = 0, weight = 0.0)
             )
-            it.copy(exercises = updated)
-        }
-    }
-
-    // Remove set from exercise
-    fun onRemoveSet(exerciseIndex: Int, setIndex: Int) {
-        _state.update {
-            val updated = it.exercises.toMutableList()
-            val exercise = updated[exerciseIndex]
-            updated[exerciseIndex] = exercise.copy(
-                sets = exercise.sets.filterIndexed { i, _ -> i != setIndex }
+            it.copy(
+                exercises = updated,
+                expandedSet = exerciseIndex to newSetIndex
             )
-            it.copy(exercises = updated)
         }
     }
 
-    // Update set reps and weight
+    fun onRemoveSet(exerciseIndex: Int, setIndex: Int) {
+        _state.update { currentState ->
+            val updated = currentState.exercises.toMutableList()
+            val exercise = updated[exerciseIndex]
+            val newSets = exercise.sets.filterIndexed { i, _ -> i != setIndex }
+            updated[exerciseIndex] = exercise.copy(sets = newSets)
+
+            val newExpanded = currentState.expandedSet?.let { (ex, set) ->
+                when {
+                    ex != exerciseIndex -> ex to set
+                    set == setIndex -> null
+                    set > setIndex -> ex to (set - 1)
+                    else -> ex to set
+                }
+            }
+            currentState.copy(exercises = updated, expandedSet = newExpanded)
+        }
+    }
+
     fun onSetChange(exerciseIndex: Int, setIndex: Int, reps: Int, weight: Double) {
         _state.update {
             val updated = it.exercises.toMutableList()
             val exercise = updated[exerciseIndex]
             val updatedSets = exercise.sets.toMutableList()
-            // Usamos copy() para preservar isWarmup e isCompleted
             updatedSets[setIndex] = updatedSets[setIndex].copy(reps = reps, weight = weight)
             updated[exerciseIndex] = exercise.copy(sets = updatedSets)
             it.copy(exercises = updated)
         }
     }
 
-    // Toggle set type between normal and warmup
     fun onToggleWarmup(exerciseIndex: Int, setIndex: Int) {
         _state.update { currentState ->
             val updatedExercises = currentState.exercises.toMutableList()
             val exercise = updatedExercises[exerciseIndex]
             val updatedSets = exercise.sets.toMutableList()
             val set = updatedSets[setIndex]
-
             updatedSets[setIndex] = set.copy(isWarmup = !set.isWarmup)
             updatedExercises[exerciseIndex] = exercise.copy(sets = updatedSets)
-
             currentState.copy(exercises = updatedExercises)
         }
     }
@@ -233,13 +254,24 @@ class CreateWorkoutViewModel : ViewModel() {
             val exercise = updatedExercises[exerciseIndex]
             val updatedSets = exercise.sets.toMutableList()
             val set = updatedSets[setIndex]
+            val wasCompleted = set.isCompleted
             updatedSets[setIndex] = set.copy(isCompleted = !set.isCompleted)
             updatedExercises[exerciseIndex] = exercise.copy(sets = updatedSets)
-            currentState.copy(exercises = updatedExercises)
+
+            var newExpanded = currentState.expandedSet
+            if (!wasCompleted) {
+                val nextIndex = updatedSets.drop(setIndex + 1).indexOfFirst { !it.isCompleted }
+                newExpanded = if (nextIndex != -1) {
+                    exerciseIndex to (setIndex + 1 + nextIndex)
+                } else {
+                    null
+                }
+            }
+
+            currentState.copy(exercises = updatedExercises, expandedSet = newExpanded)
         }
     }
 
-    // Finish and save workout to Firestore
     fun onFinishWorkout() {
         val currentState = _state.value
 
@@ -248,9 +280,12 @@ class CreateWorkoutViewModel : ViewModel() {
             return
         }
 
-        if (currentState.title.isBlank()) {
-            _state.update { it.copy(error = "Title cannot be empty") }
-            return
+        // Generate a default title if blank
+        val finalTitle = if (currentState.title.isBlank()) {
+            val formatter = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
+            "Entreno a las ${formatter.format(java.util.Date())}"
+        } else {
+            currentState.title
         }
 
         viewModelScope.launch {
@@ -269,21 +304,34 @@ class CreateWorkoutViewModel : ViewModel() {
             }
             val totalSets = workingExercises.sumOf { it.sets.size }
 
+            // Calculate progress count comparing with mock previous sets
+            var progressCount = 0
+            workingExercises.forEach { exercise ->
+                val mockPrevious = getMockPreviousSets(exercise.exerciseName)
+                exercise.sets.forEachIndexed { index, set ->
+                    val previousSet = mockPrevious.getOrNull(index)
+                    if (previousSet != null && (set.weight > previousSet.weight || set.reps > previousSet.reps)) {
+                        progressCount++
+                    }
+                }
+            }
+
             val result = workoutRepository.saveWorkout(
                 userId = uid,
                 username = user.username,
                 userPhotoUrl = user.photoUrl,
-                title = currentState.title,
+                title = finalTitle,
+                description = currentState.description,
                 durationMinutes = durationMinutes,
                 totalVolume = totalVolume,
                 totalSets = totalSets,
+                progressCount = progressCount,
                 exercises = workingExercises
             )
 
-            // Handle result using fold
             result.fold(
                 onSuccess = {
-                    _state.update { it.copy(isLoading = false, saveSuccess = true) }
+                    _state.update { it.copy(isLoading = false, saveSuccess = true, progressCount = progressCount) }
                 },
                 onFailure = { error ->
                     _state.update { it.copy(isLoading = false, error = error.message) }
@@ -292,10 +340,20 @@ class CreateWorkoutViewModel : ViewModel() {
         }
     }
 
-    // Discard workout without saving
     fun onDiscardWorkout() {
         _state.update {
             CreateWorkoutUiState(discardSuccess = true)
+        }
+    }
+
+    private fun getMockPreviousSets(exerciseName: String): List<ExerciseSet> {
+        return when {
+            exerciseName.contains("Barbell Bench Press", ignoreCase = true) -> listOf(
+                ExerciseSet(reps = 10, weight = 60.0),
+                ExerciseSet(reps = 8, weight = 80.0),
+                ExerciseSet(reps = 6, weight = 85.0)
+            )
+            else -> emptyList()
         }
     }
 }

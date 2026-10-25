@@ -3,18 +3,26 @@ package com.gymlog.app.ui.workout
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Timer
+import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -28,6 +36,20 @@ fun CreateWorkoutScreen(
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
+    val totalVolume = state.exercises
+        .flatMap { it.sets }
+        .filter { !it.isWarmup }
+        .sumOf { it.weight * it.reps }
+
+    val completedSets = state.exercises
+        .flatMap { it.sets }
+        .filter { !it.isWarmup && it.isCompleted }
+        .size
+
+    val progressCount = state.progressCount
+
+    val canFinish = !state.isLoading && state.exercises.isNotEmpty()
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -38,11 +60,22 @@ fun CreateWorkoutScreen(
                     }
                 },
                 actions = {
-                    IconButton(
+                    TextButton(
                         onClick = { viewModel.onFinishWorkout() },
-                        enabled = !state.isLoading
+                        enabled = canFinish
                     ) {
-                        Icon(Icons.Default.Check, contentDescription = "Finalizar")
+                        if (state.isLoading) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(20.dp),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        } else {
+                            Text(
+                                text = "Finalizar",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
                     }
                 }
             )
@@ -53,8 +86,7 @@ fun CreateWorkoutScreen(
                 color = MaterialTheme.colorScheme.surface
             ) {
                 Button(
-                    onClick = { viewModel.onFinishWorkout() },
-                    enabled = !state.isLoading && state.exercises.isNotEmpty(),
+                    onClick = { viewModel.onShowExerciseDialog(true) },
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(16.dp)
@@ -62,17 +94,12 @@ fun CreateWorkoutScreen(
                         .imePadding(),
                     shape = MaterialTheme.shapes.medium
                 ) {
-                    if (state.isLoading) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(24.dp),
-                            color = MaterialTheme.colorScheme.onPrimary
-                        )
-                    } else {
-                        Text(
-                            text = "Finalizar entrenamiento",
-                            style = MaterialTheme.typography.titleMedium
-                        )
-                    }
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Añadir ejercicio",
+                        style = MaterialTheme.typography.titleMedium
+                    )
                 }
             }
         }
@@ -81,81 +108,130 @@ fun CreateWorkoutScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(paddingValues)
-                .padding(horizontal = 16.dp),
+                .padding(horizontal = 16.dp)
+                .imePadding(),
             verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(top = 16.dp, bottom = 16.dp)
+            contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp)
         ) {
-            // Title
             item {
-                OutlinedTextField(
-                    value = state.title,
-                    onValueChange = viewModel::onTitleChange,
-                    label = { Text("Título") },
-                    modifier = Modifier.fillMaxWidth(),
-                    singleLine = true
-                )
-            }
+                Column(modifier = Modifier.fillMaxWidth()) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        if (state.title.isEmpty()) {
+                            Text(
+                                text = "Título del entrenamiento",
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Normal,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                            )
+                        }
+                        BasicTextField(
+                            value = state.title,
+                            onValueChange = viewModel::onTitleChange,
+                            textStyle = MaterialTheme.typography.headlineSmall.copy(
+                                color = MaterialTheme.colorScheme.onSurface,
+                                fontWeight = FontWeight.Bold
+                            ),
+                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                            modifier = Modifier.fillMaxWidth(),
+                            singleLine = true,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
+                        )
+                    }
 
-            // Chronometer
-            item {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Timer,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
+                    Spacer(modifier = Modifier.height(8.dp))
+                    HorizontalDivider(
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f),
+                        thickness = 1.dp
                     )
-                    Spacer(modifier = Modifier.width(8.dp))
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                    Text(
-                        text = TimeFormatter.formatDuration(state.elapsedSeconds),
-                        style = MaterialTheme.typography.titleLarge
-                    )
-
-                    Spacer(modifier = Modifier.width(16.dp))
-
-                    IconButton(onClick = {
-                        if (state.isTimerRunning) viewModel.onPauseTimer()
-                        else viewModel.onResumeTimer()
-                    }) {
-                        Icon(
-                            imageVector = if (state.isTimerRunning) Icons.Default.Pause else Icons.Default.PlayArrow,
-                            contentDescription = if (state.isTimerRunning) "Pausar" else "Reanudar"
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(bottom = 8.dp)
+                    ) {
+                        if (state.description.isEmpty()) {
+                            Text(
+                                text = "Describe cómo te ha ido el entreno...",
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                            )
+                        }
+                        BasicTextField(
+                            value = state.description,
+                            onValueChange = viewModel::onDescriptionChange,
+                            textStyle = MaterialTheme.typography.bodyMedium.copy(
+                                color = MaterialTheme.colorScheme.onSurface
+                            ),
+                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                            modifier = Modifier.fillMaxWidth(),
+                            maxLines = 3,
+                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
                         )
                     }
                 }
             }
 
-            // Add exercise button
             item {
-                Button(
-                    onClick = { viewModel.onShowExerciseDialog(true) },
-                    modifier = Modifier.fillMaxWidth()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(vertical = 4.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(Icons.Default.Add, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Añadir ejercicio")
+                    StatCard(
+                        modifier = Modifier.weight(1f),
+                        icon = if (state.isTimerRunning) Icons.Default.Timer else Icons.Default.PlayArrow,
+                        label = "Duración",
+                        value = TimeFormatter.formatDuration(state.elapsedSeconds),
+                        onClick = {
+                            if (state.isTimerRunning) viewModel.onPauseTimer()
+                            else viewModel.onResumeTimer()
+                        }
+                    )
+                    StatCard(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.FitnessCenter,
+                        label = "Volumen",
+                        value = "${totalVolume.toInt()} kg",
+                        iconTint = MaterialTheme.colorScheme.primary
+                    )
+                    StatCard(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.Check,
+                        label = "Series",
+                        value = "$completedSets",
+                        iconTint = MaterialTheme.colorScheme.primary
+                    )
+                    StatCard(
+                        modifier = Modifier.weight(1f),
+                        icon = Icons.Default.TrendingUp,
+                        label = "Progresos",
+                        value = "$progressCount",
+                        iconTint = MaterialTheme.colorScheme.primary
+                    )
                 }
             }
 
-            // Workout Exercises List
-            itemsIndexed(state.exercises) { index, exercise ->
-
-                val mockPreviousSets = when {
-                    exercise.exerciseName.contains("Barbell Bench Press", ignoreCase = true) -> listOf(
-                        ExerciseSet(reps = 10, weight = 60.0),
-                        ExerciseSet(reps = 8, weight = 80.0),
-                        ExerciseSet(reps = 6, weight = 85.0)
-                    )
-                    else -> emptyList()
+            if (state.exercises.isEmpty()) {
+                item {
+                    EmptyWorkoutState(onAddExercise = { viewModel.onShowExerciseDialog(true) })
                 }
+            }
+
+            itemsIndexed(state.exercises) { index, exercise ->
+                val mockPreviousSets = getMockPreviousSets(exercise.exerciseName)
+                val isThisExpanded = state.expandedSet?.first == index
+                val expandedSetIndex = if (isThisExpanded) state.expandedSet?.second else null
 
                 WorkoutExerciseCard(
                     exercise = exercise,
                     isFirst = index == 0,
                     isLast = index == state.exercises.size - 1,
+                    expandedSetIndex = expandedSetIndex,
+                    onToggleSetExpansion = { setIndex -> viewModel.onToggleSetExpansion(index, setIndex) },
                     onRemoveExercise = { viewModel.onRemoveExercise(index) },
                     onMoveUp = { viewModel.onMoveExercise(index, index - 1) },
                     onMoveDown = { viewModel.onMoveExercise(index, index + 1) },
@@ -169,7 +245,6 @@ fun CreateWorkoutScreen(
             }
         }
 
-        // Exercise selection dialog
         if (state.isExerciseDialogVisible) {
             ExerciseSelectionDialog(
                 exercises = state.availableExercises,
@@ -184,5 +259,94 @@ fun CreateWorkoutScreen(
                 onDismiss = { viewModel.onShowExerciseDialog(false) }
             )
         }
+    }
+}
+
+@Composable
+private fun StatCard(
+    modifier: Modifier = Modifier,
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    label: String,
+    value: String,
+    iconTint: Color = MaterialTheme.colorScheme.primary,
+    onClick: (() -> Unit)? = null
+) {
+    Card(
+        modifier = modifier,
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        ),
+        onClick = { onClick?.invoke() },
+        enabled = onClick != null
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 8.dp, horizontal = 4.dp),
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = null,
+                modifier = Modifier.size(18.dp),
+                tint = iconTint
+            )
+            Spacer(modifier = Modifier.height(4.dp))
+            Text(
+                text = value,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.onSurface,
+                textAlign = TextAlign.Center
+            )
+            Text(
+                text = label,
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = TextAlign.Center
+            )
+        }
+    }
+}
+
+@Composable
+private fun EmptyWorkoutState(onAddExercise: () -> Unit) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 48.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Icon(
+            imageVector = Icons.Default.FitnessCenter,
+            contentDescription = null,
+            modifier = Modifier.size(64.dp),
+            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+        )
+        Spacer(modifier = Modifier.height(16.dp))
+        Text(
+            text = "No hay ejercicios todavía",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface
+        )
+        Spacer(modifier = Modifier.height(4.dp))
+        Text(
+            text = "Añade tu primer ejercicio para empezar el entreno",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+private fun getMockPreviousSets(exerciseName: String): List<ExerciseSet> {
+    return when {
+        exerciseName.contains("Barbell Bench Press", ignoreCase = true) -> listOf(
+            ExerciseSet(reps = 10, weight = 60.0),
+            ExerciseSet(reps = 8, weight = 80.0),
+            ExerciseSet(reps = 6, weight = 85.0)
+        )
+        else -> emptyList()
     }
 }

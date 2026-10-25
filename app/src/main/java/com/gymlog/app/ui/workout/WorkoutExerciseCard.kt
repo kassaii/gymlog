@@ -1,6 +1,7 @@
 package com.gymlog.app.ui.workout
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -59,6 +60,8 @@ fun WorkoutExerciseCard(
     exercise: WorkoutExercise,
     isFirst: Boolean,
     isLast: Boolean,
+    expandedSetIndex: Int?,
+    onToggleSetExpansion: (Int) -> Unit,
     onRemoveExercise: () -> Unit,
     onMoveUp: () -> Unit,
     onMoveDown: () -> Unit,
@@ -92,20 +95,6 @@ fun WorkoutExerciseCard(
     val subtitle = exercise.muscleGroup.ifEmpty { "Ejercicio" }
 
     var showExerciseSheet by remember { mutableStateOf(false) }
-
-    var expandedSetIndex by remember { mutableStateOf<Int?>(null) }
-    var hasInitializedExpanded by remember { mutableStateOf(false) }
-
-    if (!hasInitializedExpanded && exercise.sets.isNotEmpty()) {
-        expandedSetIndex = exercise.sets.indexOfFirst { !it.isCompleted }.takeIf { it != -1 }
-        hasInitializedExpanded = true
-    }
-
-    LaunchedEffect(exercise.sets.size) {
-        if (expandedSetIndex == null || expandedSetIndex!! >= exercise.sets.size) {
-            expandedSetIndex = exercise.sets.indexOfFirst { !it.isCompleted }.takeIf { it != -1 }
-        }
-    }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
@@ -180,19 +169,10 @@ fun WorkoutExerciseCard(
                     previous = info.previous,
                     isExpanded = expandedSetIndex == setIndex,
                     workoutColors = workoutColors,
-                    onExpand = {
-                        expandedSetIndex = if (expandedSetIndex == setIndex) null else setIndex
-                    },
+                    onExpand = { onToggleSetExpansion(setIndex) },
                     onSetChange = { reps, weight -> onSetChange(setIndex, reps, weight) },
                     onToggleWarmup = { onToggleWarmup(setIndex) },
-                    onToggleCheck = {
-                        val wasCompleted = set.isCompleted
-                        onToggleCheck(setIndex)
-                        if (!wasCompleted) {
-                            val nextIndex = exercise.sets.drop(setIndex + 1).indexOfFirst { !it.isCompleted }
-                            expandedSetIndex = if (nextIndex != -1) setIndex + 1 + nextIndex else null
-                        }
-                    },
+                    onToggleCheck = { onToggleCheck(setIndex) },
                     onRemoveSet = { onRemoveSet(setIndex) }
                 )
             }
@@ -200,11 +180,7 @@ fun WorkoutExerciseCard(
             Spacer(modifier = Modifier.height(8.dp))
 
             Button(
-                onClick = {
-                    val newIndex = exercise.sets.size
-                    onAddSet()
-                    expandedSetIndex = newIndex
-                },
+                onClick = onAddSet,
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
@@ -369,8 +345,6 @@ private fun SetRow(
                 )
                 .padding(horizontal = 12.dp, vertical = 12.dp)
         ) {
-
-            // Set number
             Box(
                 modifier = Modifier.width(SetBoxSize),
                 contentAlignment = Alignment.Center
@@ -408,7 +382,6 @@ private fun SetRow(
 
             Spacer(modifier = Modifier.width(ColumnGap))
 
-            // Weight
             Box(
                 modifier = Modifier.weight(1f),
                 contentAlignment = Alignment.Center
@@ -421,7 +394,6 @@ private fun SetRow(
                 )
             }
 
-            // Reps
             Spacer(modifier = Modifier.width(ColumnGap))
 
             Box(
@@ -438,7 +410,6 @@ private fun SetRow(
 
             Spacer(modifier = Modifier.width(ColumnGap))
 
-            // Progress chip
             Box(
                 modifier = Modifier.weight(1.2f),
                 contentAlignment = Alignment.Center
@@ -493,7 +464,6 @@ private fun SetRow(
 
             Spacer(modifier = Modifier.width(ColumnGap))
 
-            // KeyboardArrowDown
             Box(
                 modifier = Modifier.width(SetBoxSize),
                 contentAlignment = Alignment.Center
@@ -514,8 +484,6 @@ private fun SetRow(
                     .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
                     .padding(12.dp)
             ) {
-
-                // Weight
                 UnifiedStepInput(
                     value = if (set.weight > 0) NumberFormatter.toInputText(set.weight) else "",
                     hint = previous?.weight?.let { NumberFormatter.toInputText(it) } ?: "0",
@@ -581,7 +549,6 @@ private fun SetRow(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Reps
                 UnifiedStepInput(
                     value = if (set.reps > 0) set.reps.toString() else "",
                     hint = previous?.reps?.toString() ?: "0",
@@ -707,6 +674,8 @@ private fun SetRow(
                         )
                     }
 
+                    val completedGreen = Color(0xFF529B56)
+
                     Button(
                         onClick = onToggleCheck,
                         modifier = Modifier
@@ -714,8 +683,12 @@ private fun SetRow(
                             .fillMaxHeight(),
                         shape = CircleShape,
                         colors = ButtonDefaults.buttonColors(
-                            containerColor = if (set.isCompleted) Color(0xFF529B56) else MaterialTheme.colorScheme.primary
-                        )
+                            containerColor = if (set.isCompleted) completedGreen else Color.Transparent,
+                            contentColor = if (set.isCompleted) Color.White else MaterialTheme.colorScheme.primary
+                        ),
+                        border = if (!set.isCompleted) {
+                            BorderStroke(1.dp, MaterialTheme.colorScheme.primary.copy(alpha = 0.7f))
+                        } else null
                     ) {
                         Text(
                             if (set.isCompleted) "Completada" else "Completar",
