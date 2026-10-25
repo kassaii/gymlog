@@ -18,6 +18,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.gymlog.app.data.model.ExerciseSet
 import com.gymlog.app.util.TimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -141,15 +142,29 @@ fun CreateWorkoutScreen(
 
             // Workout Exercises List
             itemsIndexed(state.exercises) { index, exercise ->
+
+                val mockPreviousSets = when {
+                    exercise.exerciseName.contains("Barbell Bench Press", ignoreCase = true) -> listOf(
+                        ExerciseSet(reps = 10, weight = 60.0),
+                        ExerciseSet(reps = 8, weight = 80.0),
+                        ExerciseSet(reps = 6, weight = 85.0)
+                    )
+                    else -> emptyList()
+                }
+
                 WorkoutExerciseCard(
                     exercise = exercise,
-                    exerciseIndex = index,
+                    isFirst = index == 0,
+                    isLast = index == state.exercises.size - 1,
                     onRemoveExercise = { viewModel.onRemoveExercise(index) },
+                    onMoveUp = { viewModel.onMoveExercise(index, index - 1) },
+                    onMoveDown = { viewModel.onMoveExercise(index, index + 1) },
                     onAddSet = { viewModel.onAddSet(index) },
                     onRemoveSet = { setIndex -> viewModel.onRemoveSet(index, setIndex) },
-                    onSetChange = { setIndex, reps, weight ->
-                        viewModel.onSetChange(index, setIndex, reps, weight)
-                    }
+                    onSetChange = { setIndex, reps, weight -> viewModel.onSetChange(index, setIndex, reps, weight) },
+                    onToggleWarmup = { setIndex -> viewModel.onToggleWarmup(index, setIndex) },
+                    onToggleCheck = { setIndex -> viewModel.onToggleCheck(index, setIndex) },
+                    previousSets = mockPreviousSets
                 )
             }
         }

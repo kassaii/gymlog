@@ -140,7 +140,8 @@ class CreateWorkoutViewModel : ViewModel() {
                 exerciseId = exercise.id,
                 exerciseName = exercise.name,
                 exercisePhotoUrl = exercise.photoUrl,
-                sets = emptyList()
+                muscleGroup = exercise.muscleGroup,
+                sets = listOf(ExerciseSet(reps = 0, weight = 0.0))
             )
         }
 
@@ -160,6 +161,19 @@ class CreateWorkoutViewModel : ViewModel() {
             )
         }
     }
+
+    // Move exercise up or down
+    fun onMoveExercise(fromIndex: Int, toIndex: Int) {
+        _state.update { currentState ->
+            val exercises = currentState.exercises.toMutableList()
+            if (fromIndex in exercises.indices && toIndex in exercises.indices) {
+                val item = exercises.removeAt(fromIndex)
+                exercises.add(toIndex, item)
+            }
+            currentState.copy(exercises = exercises)
+        }
+    }
+
 
     // Add empty set to exercise
     fun onAddSet(exerciseIndex: Int) {
@@ -191,9 +205,37 @@ class CreateWorkoutViewModel : ViewModel() {
             val updated = it.exercises.toMutableList()
             val exercise = updated[exerciseIndex]
             val updatedSets = exercise.sets.toMutableList()
-            updatedSets[setIndex] = ExerciseSet(reps = reps, weight = weight)
+            // Usamos copy() para preservar isWarmup e isCompleted
+            updatedSets[setIndex] = updatedSets[setIndex].copy(reps = reps, weight = weight)
             updated[exerciseIndex] = exercise.copy(sets = updatedSets)
             it.copy(exercises = updated)
+        }
+    }
+
+    // Toggle set type between normal and warmup
+    fun onToggleWarmup(exerciseIndex: Int, setIndex: Int) {
+        _state.update { currentState ->
+            val updatedExercises = currentState.exercises.toMutableList()
+            val exercise = updatedExercises[exerciseIndex]
+            val updatedSets = exercise.sets.toMutableList()
+            val set = updatedSets[setIndex]
+
+            updatedSets[setIndex] = set.copy(isWarmup = !set.isWarmup)
+            updatedExercises[exerciseIndex] = exercise.copy(sets = updatedSets)
+
+            currentState.copy(exercises = updatedExercises)
+        }
+    }
+
+    fun onToggleCheck(exerciseIndex: Int, setIndex: Int) {
+        _state.update { currentState ->
+            val updatedExercises = currentState.exercises.toMutableList()
+            val exercise = updatedExercises[exerciseIndex]
+            val updatedSets = exercise.sets.toMutableList()
+            val set = updatedSets[setIndex]
+            updatedSets[setIndex] = set.copy(isCompleted = !set.isCompleted)
+            updatedExercises[exerciseIndex] = exercise.copy(sets = updatedSets)
+            currentState.copy(exercises = updatedExercises)
         }
     }
 
@@ -217,11 +259,15 @@ class CreateWorkoutViewModel : ViewModel() {
             val uid = authRepository.getCurrentUserId()!!
             val user = authRepository.getUserProfile(uid).getOrThrow()
 
+            val workingExercises = currentState.exercises.map { exercise ->
+                exercise.copy(sets = exercise.sets.filter { !it.isWarmup })
+            }.filter { it.sets.isNotEmpty() }
+
             val durationMinutes = currentState.elapsedSeconds / 60
-            val totalVolume = currentState.exercises.sumOf { ex ->
+            val totalVolume = workingExercises.sumOf { ex ->
                 ex.sets.sumOf { set -> set.reps * set.weight }
             }
-            val totalSets = currentState.exercises.sumOf { it.sets.size }
+            val totalSets = workingExercises.sumOf { it.sets.size }
 
             val result = workoutRepository.saveWorkout(
                 userId = uid,
@@ -231,7 +277,7 @@ class CreateWorkoutViewModel : ViewModel() {
                 durationMinutes = durationMinutes,
                 totalVolume = totalVolume,
                 totalSets = totalSets,
-                exercises = currentState.exercises
+                exercises = workingExercises
             )
 
             // Handle result using fold

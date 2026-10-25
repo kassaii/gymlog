@@ -4,5 +4,7 @@ package com.gymlog.app.data.model
 // Contains the set data
 data class ExerciseSet(
     val reps: Int = 0,
-    val weight: Double = 0.0
+    val weight: Double = 0.0,
+    val isWarmup: Boolean = false,
+    val isCompleted: Boolean = false
 )

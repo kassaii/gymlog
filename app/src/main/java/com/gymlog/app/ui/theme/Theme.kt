@@ -8,7 +8,34 @@ import androidx.compose.material3.dynamicDarkColorScheme
 import androidx.compose.material3.dynamicLightColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
+
+data class WorkoutColors(
+    val warmup: Color,
+    val warmupBackground: Color,
+    val warmupCompletedBackground: Color,
+    val completedSet: Color,
+    val up: Color,
+    val upBackground: Color,
+    val down: Color,
+    val downBackground: Color
+)
+
+val LocalWorkoutColors = staticCompositionLocalOf {
+    WorkoutColors(
+        warmup = WarmupColor,
+        warmupBackground = WarmupBackground,
+        warmupCompletedBackground = WarmupCompletedBackground,
+        completedSet = CompletedSetColor,
+        up = UpColor,
+        upBackground = UpBackground,
+        down = DownColor,
+        downBackground = DownBackground
+    )
+}
 
 private val DarkColorScheme = darkColorScheme(
     primary = Purple80,
@@ -20,22 +47,11 @@ private val LightColorScheme = lightColorScheme(
     primary = Purple40,
     secondary = PurpleGrey40,
     tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
 )
 
 @Composable
 fun GymTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
-    // Dynamic color is available on Android 12+
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
@@ -49,9 +65,11 @@ fun GymTheme(
         else -> LightColorScheme
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+    CompositionLocalProvider(LocalWorkoutColors provides LocalWorkoutColors.current) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = Typography,
+            content = content
+        )
+    }
 }
