@@ -184,7 +184,7 @@ fun WorkoutExerciseCard(
                 modifier = Modifier.fillMaxWidth(),
                 colors = ButtonDefaults.buttonColors(
                     containerColor = MaterialTheme.colorScheme.primaryContainer,
-                    contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                    contentColor = MaterialTheme.colorScheme.onPrimaryContainer
                 )
             ) {
                 Icon(Icons.Default.Add, contentDescription = null)
@@ -336,7 +336,7 @@ private fun SetRow(
                         set.isWarmup && set.isCompleted -> workoutColors.warmupCompletedBackground
                         set.isWarmup -> workoutColors.warmupBackground
                         set.isCompleted -> workoutColors.completedSet
-                        else -> MaterialTheme.colorScheme.surface
+                        else -> MaterialTheme.colorScheme.background
                     }
                 )
                 .combinedClickable(
@@ -374,7 +374,7 @@ private fun SetRow(
                             text = label,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
-                            color = if (set.isWarmup) workoutColors.warmup else MaterialTheme.colorScheme.onSurface
+                            color = if (set.isWarmup) workoutColors.warmup else MaterialTheme.colorScheme.onSecondaryContainer
                         )
                     }
                 }
@@ -481,7 +481,7 @@ private fun SetRow(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(top = 4.dp)
-                    .background(MaterialTheme.colorScheme.surface.copy(alpha = 0.5f), RoundedCornerShape(10.dp))
+                    .background(MaterialTheme.colorScheme.surface, RoundedCornerShape(10.dp))
                     .padding(12.dp)
             ) {
                 UnifiedStepInput(
@@ -674,7 +674,7 @@ private fun SetRow(
                         )
                     }
 
-                    val completedGreen = Color(0xFF529B56)
+                    val completedGreen = workoutColors.up
 
                     Button(
                         onClick = onToggleCheck,
@@ -802,7 +802,7 @@ private fun UnifiedStepInput(
             .fillMaxWidth()
             .height(56.dp)
             .clip(RoundedCornerShape(12.dp))
-            .background(MaterialTheme.colorScheme.surface)
+            .background(MaterialTheme.colorScheme.background)
             .padding(horizontal = 6.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {

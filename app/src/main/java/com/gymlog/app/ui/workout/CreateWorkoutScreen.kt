@@ -54,6 +54,9 @@ fun CreateWorkoutScreen(
         topBar = {
             TopAppBar(
                 title = { Text("Crear entrenamiento") },
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                ),
                 navigationIcon = {
                     IconButton(onClick = { viewModel.onDiscardWorkout() }) {
                         Icon(Icons.Default.Close, contentDescription = "Descartar")
@@ -274,7 +277,10 @@ private fun StatCard(
     Card(
         modifier = modifier,
         colors = CardDefaults.cardColors(
-            containerColor = MaterialTheme.colorScheme.surfaceVariant
+            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+            disabledContainerColor = MaterialTheme.colorScheme.surfaceVariant,
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            disabledContentColor = MaterialTheme.colorScheme.onSurfaceVariant
         ),
         onClick = { onClick?.invoke() },
         enabled = onClick != null
