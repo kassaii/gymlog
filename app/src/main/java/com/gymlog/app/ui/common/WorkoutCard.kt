@@ -1,34 +1,36 @@
 package com.gymlog.app.ui.common
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FitnessCenter
-import androidx.compose.material.icons.filled.List
-import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material3.Card
-import androidx.compose.material3.HorizontalDivider
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
-import androidx.compose.material3.VerticalDivider
+import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
+import coil.compose.AsyncImage
 import com.gymlog.app.data.model.ExerciseSet
 import com.gymlog.app.data.model.Workout
 import com.gymlog.app.data.model.WorkoutExercise
+import com.gymlog.app.ui.theme.GymTheme
+import com.gymlog.app.ui.theme.LocalWorkoutColors
+import com.gymlog.app.ui.theme.WorkoutColors
 import com.gymlog.app.util.DateFormatter
 import com.gymlog.app.util.WeightFormatter
+
+private const val MAX_VISIBLE_EXERCISES = 3
 
 @Composable
 fun WorkoutCard(
@@ -36,114 +38,134 @@ fun WorkoutCard(
     weightUnit: String,
     modifier: Modifier = Modifier
 ) {
-    Card(modifier = modifier.fillMaxWidth()) {
-        Column(modifier = Modifier.padding(vertical = 10.dp, horizontal = 14.dp)) {
+    val workoutColors = LocalWorkoutColors.current
 
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(20.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+
+            // User header with photo with ring, username and date
             Row(verticalAlignment = Alignment.CenterVertically) {
-                // Image
-
-                Column() {
-                    // Username
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .border(2.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                        .padding(3.dp)
+                        .clip(CircleShape)
+                        .background(MaterialTheme.colorScheme.surface),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (workout.userPhotoUrl.isNotBlank()) {
+                        AsyncImage(
+                            model = workout.userPhotoUrl,
+                            contentDescription = "Foto de ${workout.username}",
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize()
+                        )
+                    } else {
+                        Icon(
+                            imageVector = Icons.Default.Person,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
+                Spacer(modifier = Modifier.width(12.dp))
+                Column(modifier = Modifier.weight(1f)) {
                     Text(
                         text = workout.username,
-                        style = MaterialTheme.typography.titleMedium
+                        style = MaterialTheme.typography.titleSmall,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
-
-                    Spacer(Modifier.height(4.dp))
-
-                    // Date - Hour
                     Text(
-                        text = DateFormatter.formatDateTime(workout.date),
+                        text = DateFormatter.formatSocialDateTime(workout.date),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
-
-
             }
 
-            Spacer(Modifier.height(6.dp))
-            HorizontalDivider()
+            Spacer(modifier = Modifier.height(14.dp))
 
-            Spacer(Modifier.height(6.dp))
-
-            // Title
+            // Title and description
             Text(
                 text = workout.title,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
+                style = MaterialTheme.typography.titleLarge,
+                fontWeight = FontWeight.ExtraBold,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis
             )
+            if (workout.description.isNotBlank()) {
+                Spacer(modifier = Modifier.height(4.dp))
+                Text(
+                    text = workout.description,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 3,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
 
-            Spacer(Modifier.height(8.dp))
+            Spacer(modifier = Modifier.height(14.dp))
 
-            // Data row
+            // Stats row
             Row(
-                verticalAlignment = Alignment.CenterVertically,
-                modifier = Modifier.height(20.dp)
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(MaterialTheme.colorScheme.surface)
+                    .padding(vertical = 12.dp, horizontal = 8.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.Timer,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
+                StatItem(
+                    value = "${workout.durationMinutes} min",
+                    label = "Duración",
+                    modifier = Modifier.weight(1f)
+                )
+                StatDivider()
+                StatItem(
+                    value = WeightFormatter.format(workout.totalVolume, weightUnit),
+                    label = "Volumen",
+                    modifier = Modifier.weight(1f)
+                )
+                StatDivider()
+                StatItem(
+                    value = "${workout.totalSets}",
+                    label = "Series",
+                    modifier = Modifier.weight(1f)
+                )
+                if (workout.progressCount > 0) {
+                    StatDivider()
+                    ProgressStat(
+                        count = workout.progressCount,
+                        workoutColors = workoutColors,
+                        modifier = Modifier.weight(1f)
                     )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("${workout.durationMinutes} min")
-                }
-
-                Spacer(Modifier.width(8.dp))
-                VerticalDivider()
-                Spacer(Modifier.width(8.dp))
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.FitnessCenter,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text(WeightFormatter.format(workout.totalVolume, weightUnit))
-                }
-
-                Spacer(Modifier.width(8.dp))
-                VerticalDivider()
-                Spacer(Modifier.width(8.dp))
-
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Default.List,
-                        contentDescription = null,
-                        modifier = Modifier.size(16.dp)
-                    )
-                    Spacer(modifier = Modifier.width(4.dp))
-                    Text("${workout.totalSets} series")
                 }
             }
 
-            Spacer(Modifier.height(8.dp))
-            HorizontalDivider()
-            Spacer(Modifier.height(2.dp))
-
             // Exercises
-            workout.exercises.take(3).forEach { exercise ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(vertical = 5.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    // Image
+            if (workout.exercises.isNotEmpty()) {
+                Spacer(modifier = Modifier.height(14.dp))
 
+                workout.exercises.take(MAX_VISIBLE_EXERCISES).forEach { exercise ->
+                    ExerciseRow(exercise = exercise, weightUnit = weightUnit)
+                }
+
+                val remaining = workout.exercises.size - MAX_VISIBLE_EXERCISES
+                if (remaining > 0) {
+                    Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "${exercise.sets.size} series",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(
-                        text = exercise.exerciseName,
-                        style = MaterialTheme.typography.bodyMedium
+                        text = if (remaining == 1) "+1 ejercicio más" else "+$remaining ejercicios más",
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = FontWeight.SemiBold,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
                     )
                 }
             }
@@ -151,43 +173,149 @@ fun WorkoutCard(
     }
 }
 
-@Preview(showBackground = true)
 @Composable
-fun WorkoutCardPreview() {
-    WorkoutCard(
-        workout = Workout(
-            id = "1",
-            username = "juanfit",
-            title = "PECHO",
-            date = System.currentTimeMillis(),
-            durationMinutes = 45,
-            totalVolume = 4200.0,
-            totalSets = 12,
-            exercises = listOf(
-                WorkoutExercise(
-                    exerciseName = "Press plano en máquina",
-                    sets = listOf(
-                        ExerciseSet(reps = 8, weight = 60.0),
-                        ExerciseSet(reps = 8, weight = 65.0),
-                        ExerciseSet(reps = 8, weight = 70.0)
-                    )
-                ),
-                WorkoutExercise(
-                    exerciseName = "Press inclinado con mancuernas",
-                    sets = listOf(
-                        ExerciseSet(reps = 10, weight = 50.0),
-                        ExerciseSet(reps = 10, weight = 55.0)
-                    )
-                ),
-                WorkoutExercise(
-                    exerciseName = "Fondos",
-                    sets = listOf(
-                        ExerciseSet(reps = 12, weight = 0.0),
-                        ExerciseSet(reps = 12, weight = 0.0)
-                    )
-                )
+private fun ExerciseRow(
+    exercise: WorkoutExercise,
+    weightUnit: String
+) {
+    val workingSets = exercise.sets.filter { !it.isWarmup }.ifEmpty { exercise.sets }
+    val best = workingSets.maxWithOrNull(compareBy<ExerciseSet>({ it.weight }, { it.reps }))
+
+    val seriesText = if (workingSets.size == 1) "1 serie" else "${workingSets.size} series"
+    val detail = when {
+        best == null -> seriesText
+        best.weight > 0.0 -> "$seriesText · ${
+            WeightFormatter.format(
+                best.weight,
+                weightUnit
             )
-        ),
-        weightUnit = "kg"
+        } × ${best.reps}"
+
+        else -> "$seriesText · ${best.reps} reps"
+    }
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 5.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(40.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surface),
+            contentAlignment = Alignment.Center
+        ) {
+            if (exercise.exercisePhotoUrl.isNotBlank()) {
+                AsyncImage(
+                    model = exercise.exercisePhotoUrl,
+                    contentDescription = exercise.exerciseName,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.FitnessCenter,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(20.dp)
+                )
+            }
+        }
+        Spacer(modifier = Modifier.width(12.dp))
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = exercise.exerciseName,
+                style = MaterialTheme.typography.bodyMedium,
+                fontWeight = FontWeight.SemiBold,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+            Text(
+                text = detail,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
+    }
+}
+
+@Composable
+private fun StatItem(
+    value: String,
+    label: String,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = value,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
+            textAlign = TextAlign.Center
+        )
+        Text(
+            text = label,
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1,
+            textAlign = TextAlign.Center
+        )
+    }
+}
+
+@Composable
+private fun ProgressStat(
+    count: Int,
+    workoutColors: WorkoutColors,
+    modifier: Modifier = Modifier
+) {
+    Column(
+        modifier = modifier,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Row(
+            modifier = Modifier
+                .clip(RoundedCornerShape(8.dp))
+                .background(workoutColors.upBackground)
+                .padding(horizontal = 8.dp, vertical = 2.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Icon(
+                imageVector = Icons.Default.TrendingUp,
+                contentDescription = null,
+                modifier = Modifier.size(16.dp),
+                tint = workoutColors.up
+            )
+            Spacer(modifier = Modifier.width(4.dp))
+            Text(
+                text = "+$count",
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = workoutColors.up
+            )
+        }
+        Text(
+            text = "Progresos",
+            style = MaterialTheme.typography.labelSmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            maxLines = 1
+        )
+    }
+}
+
+@Composable
+private fun StatDivider() {
+    Box(
+        modifier = Modifier
+            .width(1.dp)
+            .height(28.dp)
+            .background(MaterialTheme.colorScheme.outlineVariant)
     )
 }
