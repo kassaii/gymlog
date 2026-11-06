@@ -4,18 +4,11 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
-import com.gymlog.app.ui.auth.LoginScreen
-import com.gymlog.app.ui.auth.RegisterScreen
-import com.gymlog.app.ui.feed.explore.ExploreFeedScreen
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.compose.rememberNavController
+import com.gymlog.app.ui.navigation.AppNavigation
 import com.gymlog.app.ui.theme.GymTheme
-import com.gymlog.app.ui.workout.CreateWorkoutScreen
+import com.gymlog.app.ui.workout.CreateWorkoutViewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -23,24 +16,13 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             GymTheme {
-                CreateWorkoutScreen()
+                val navController = rememberNavController()
+                val createWorkoutViewModel: CreateWorkoutViewModel = viewModel()
+                AppNavigation(
+                    navController = navController,
+                    createWorkoutViewModel = createWorkoutViewModel
+                )
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    GymTheme {
-        Greeting("Android")
     }
 }

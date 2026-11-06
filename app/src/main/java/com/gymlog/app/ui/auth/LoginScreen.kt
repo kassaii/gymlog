@@ -8,12 +8,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,9 +28,17 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun LoginScreen(
+    onLoginSuccess: () -> Unit,
+    onNavigateToRegister: () -> Unit,
     viewModel: LoginViewModel = viewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+    LaunchedEffect(state.loginSuccess) {
+        if (state.loginSuccess) {
+            onLoginSuccess()
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -36,7 +47,6 @@ fun LoginScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Title
         Text(
             text = "Iniciar sesión",
             style = MaterialTheme.typography.headlineMedium
@@ -44,7 +54,6 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Email field
         TextField(
             value = state.email,
             onValueChange = viewModel::onEmailChange,
@@ -55,7 +64,6 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Password field
         TextField(
             value = state.password,
             onValueChange = viewModel::onPasswordChange,
@@ -67,7 +75,6 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Login button
         Button(
             onClick = viewModel::onLoginClicked,
             enabled = !state.isLoading,
@@ -76,13 +83,26 @@ fun LoginScreen(
             Text("Entrar")
         }
 
-        // Loading spinner
+        Spacer(modifier = Modifier.height(8.dp))
+
+        // Provisional (eliminar más adelante)
+        OutlinedButton(
+            onClick = {
+                viewModel.onEmailChange("test4@gymlog.com")
+                viewModel.onPasswordChange("test123")
+                viewModel.onLoginClicked()
+            },
+            enabled = !state.isLoading,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Iniciar sesión como test4")
+        }
+
         if (state.isLoading) {
             Spacer(modifier = Modifier.height(16.dp))
             CircularProgressIndicator()
         }
 
-        // Error message
         state.error?.let { mensaje ->
             Spacer(modifier = Modifier.height(16.dp))
             Text(
@@ -93,8 +113,7 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Register link
-        TextButton(onClick = { /* Register */ }) {
+        TextButton(onClick = onNavigateToRegister) {
             Text("¿No tienes cuenta? Regístrate")
         }
     }

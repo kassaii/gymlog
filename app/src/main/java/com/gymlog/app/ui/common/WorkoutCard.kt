@@ -2,6 +2,7 @@ package com.gymlog.app.ui.common
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -18,13 +19,11 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import coil.compose.AsyncImage
 import com.gymlog.app.data.model.ExerciseSet
 import com.gymlog.app.data.model.Workout
 import com.gymlog.app.data.model.WorkoutExercise
-import com.gymlog.app.ui.theme.GymTheme
 import com.gymlog.app.ui.theme.LocalWorkoutColors
 import com.gymlog.app.ui.theme.WorkoutColors
 import com.gymlog.app.util.DateFormatter
@@ -36,12 +35,15 @@ private const val MAX_VISIBLE_EXERCISES = 3
 fun WorkoutCard(
     workout: Workout,
     weightUnit: String,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onClick: () -> Unit = {}
 ) {
     val workoutColors = LocalWorkoutColors.current
 
     Card(
-        modifier = modifier.fillMaxWidth(),
+        modifier = modifier
+            .fillMaxWidth()
+            .clickable { onClick() },
         shape = RoundedCornerShape(20.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
     ) {
@@ -61,7 +63,7 @@ fun WorkoutCard(
                     if (workout.userPhotoUrl.isNotBlank()) {
                         AsyncImage(
                             model = workout.userPhotoUrl,
-                            contentDescription = "Foto de ${workout.username}",
+                            contentDescription = "Profile picture of ${workout.username}",
                             contentScale = ContentScale.Crop,
                             modifier = Modifier.fillMaxSize()
                         )

@@ -6,16 +6,19 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
-import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Timer
-import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -25,16 +28,44 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import androidx.lifecycle.viewmodel.compose.viewModel
-import com.gymlog.app.data.model.ExerciseSet
 import com.gymlog.app.util.TimeFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateWorkoutScreen(
-    viewModel: CreateWorkoutViewModel = viewModel()
+    viewModel: CreateWorkoutViewModel,
+    onWorkoutSaved: () -> Unit,
+    onMinimize: () -> Unit
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+    var showDiscardDialog by remember { mutableStateOf(false) }
+    var showFinishDialog by remember { mutableStateOf(false) }
+
+    // Start timer on first composition
+    LaunchedEffect(Unit) {
+        viewModel.startWorkoutIfNeeded()
+    }
+
+    // Navigate back when workout is saved
+    LaunchedEffect(state.saveSuccess) {
+        if (state.saveSuccess) {
+            onWorkoutSaved()
+            viewModel.onSaveHandled()
+        }
+    }
+
+    // Navigate back when workout is discarded
+    LaunchedEffect(state.discardSuccess) {
+        if (state.discardSuccess) {
+            onMinimize()
+            viewModel.onDiscardHandled()
+        }
+    }
+
+    // Reload exercises if they are empty
+    LaunchedEffect(Unit) {
+        viewModel.reloadExercisesIfNeeded()
+    }
 
     val totalVolume = state.exercises
         .flatMap { it.sets }
@@ -46,8 +77,6 @@ fun CreateWorkoutScreen(
         .filter { !it.isWarmup && it.isCompleted }
         .size
 
-    val progressCount = state.progressCount
-
     val canFinish = !state.isLoading && state.exercises.isNotEmpty()
 
     Scaffold(
@@ -58,13 +87,16 @@ fun CreateWorkoutScreen(
                     containerColor = MaterialTheme.colorScheme.background
                 ),
                 navigationIcon = {
-                    IconButton(onClick = { viewModel.onDiscardWorkout() }) {
-                        Icon(Icons.Default.Close, contentDescription = "Descartar")
+                    IconButton(onClick = onMinimize) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Minimize"
+                        )
                     }
                 },
                 actions = {
                     TextButton(
-                        onClick = { viewModel.onFinishWorkout() },
+                        onClick = { showFinishDialog = true },
                         enabled = canFinish
                     ) {
                         if (state.isLoading) {
@@ -88,21 +120,31 @@ fun CreateWorkoutScreen(
                 shadowElevation = 8.dp,
                 color = MaterialTheme.colorScheme.surface
             ) {
-                Button(
-                    onClick = { viewModel.onShowExerciseDialog(true) },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(16.dp)
-                        .height(56.dp)
-                        .imePadding(),
-                    shape = MaterialTheme.shapes.medium
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = null)
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Añadir ejercicio",
-                        style = MaterialTheme.typography.titleMedium
-                    )
+                Column(modifier = Modifier.padding(16.dp)) {
+                    Button(
+                        onClick = { viewModel.onShowExerciseDialog(true) },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(56.dp),
+                        shape = MaterialTheme.shapes.medium
+                    ) {
+                        Icon(Icons.Default.Add, contentDescription = null)
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text(
+                            text = "Añadir ejercicio",
+                            style = MaterialTheme.typography.titleMedium
+                        )
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                    TextButton(
+                        onClick = { showDiscardDialog = true },
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Descartar entrenamiento",
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    }
                 }
             }
         }
@@ -208,13 +250,6 @@ fun CreateWorkoutScreen(
                         value = "$completedSets",
                         iconTint = MaterialTheme.colorScheme.primary
                     )
-                    StatCard(
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Default.TrendingUp,
-                        label = "Progresos",
-                        value = "$progressCount",
-                        iconTint = MaterialTheme.colorScheme.primary
-                    )
                 }
             }
 
@@ -225,9 +260,16 @@ fun CreateWorkoutScreen(
             }
 
             itemsIndexed(state.exercises) { index, exercise ->
-                val mockPreviousSets = getMockPreviousSets(exercise.exerciseName)
                 val isThisExpanded = state.expandedSet?.first == index
                 val expandedSetIndex = if (isThisExpanded) state.expandedSet?.second else null
+
+                // Convert the map of setIndex -> set to an ordered list of sets.
+                // If no previous data exists for this exercise, pass an empty list.
+                val previousSets = state.previousSetsByExercise[exercise.exerciseName]
+                    ?.toSortedMap()
+                    ?.values
+                    ?.toList()
+                    ?: emptyList()
 
                 WorkoutExerciseCard(
                     exercise = exercise,
@@ -243,7 +285,7 @@ fun CreateWorkoutScreen(
                     onSetChange = { setIndex, reps, weight -> viewModel.onSetChange(index, setIndex, reps, weight) },
                     onToggleWarmup = { setIndex -> viewModel.onToggleWarmup(index, setIndex) },
                     onToggleCheck = { setIndex -> viewModel.onToggleCheck(index, setIndex) },
-                    previousSets = mockPreviousSets
+                    previousSets = previousSets
                 )
             }
         }
@@ -262,6 +304,52 @@ fun CreateWorkoutScreen(
                 onDismiss = { viewModel.onShowExerciseDialog(false) }
             )
         }
+    }
+
+    if (showFinishDialog) {
+        AlertDialog(
+            onDismissRequest = { showFinishDialog = false },
+            title = { Text("Finalizar entrenamiento") },
+            text = { Text("¿Estás seguro de que quieres finalizar el entrenamiento? Se guardará en tu perfil.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showFinishDialog = false
+                        viewModel.onFinishWorkout()
+                    }
+                ) {
+                    Text("Finalizar", color = MaterialTheme.colorScheme.primary)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showFinishDialog = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
+    }
+
+    if (showDiscardDialog) {
+        AlertDialog(
+            onDismissRequest = { showDiscardDialog = false },
+            title = { Text("Descartar entrenamiento") },
+            text = { Text("¿Estás seguro de que quieres descartar el entrenamiento? Se perderán todos los datos.") },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        showDiscardDialog = false
+                        viewModel.onDiscardWorkout()
+                    }
+                ) {
+                    Text("Descartar", color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDiscardDialog = false }) {
+                    Text("Cancelar")
+                }
+            }
+        )
     }
 }
 
@@ -343,16 +431,5 @@ private fun EmptyWorkoutState(onAddExercise: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center
         )
-    }
-}
-
-private fun getMockPreviousSets(exerciseName: String): List<ExerciseSet> {
-    return when {
-        exerciseName.contains("Barbell Bench Press", ignoreCase = true) -> listOf(
-            ExerciseSet(reps = 10, weight = 60.0),
-            ExerciseSet(reps = 8, weight = 80.0),
-            ExerciseSet(reps = 6, weight = 85.0)
-        )
-        else -> emptyList()
     }
 }

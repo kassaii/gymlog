@@ -14,6 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -25,9 +26,17 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 
 @Composable
 fun RegisterScreen(
+    onRegisterSuccess: () -> Unit,
+    onNavigateToLogin: () -> Unit,
     viewModel: RegisterViewModel = viewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+    LaunchedEffect(state.registerSuccess) {
+        if (state.registerSuccess) {
+            onRegisterSuccess()
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -36,7 +45,6 @@ fun RegisterScreen(
         verticalArrangement = Arrangement.Center,
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
-        // Title
         Text(
             text = "¡Regístrate!",
             style = MaterialTheme.typography.headlineMedium
@@ -44,7 +52,6 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(32.dp))
 
-        // Username field
         TextField(
             value = state.username,
             onValueChange = viewModel::onUsernameChange,
@@ -55,8 +62,6 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-
-        // Email field
         TextField(
             value = state.email,
             onValueChange = viewModel::onEmailChange,
@@ -67,7 +72,6 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Password field
         TextField(
             value = state.password,
             onValueChange = viewModel::onPasswordChange,
@@ -79,7 +83,6 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Register button
         Button(
             onClick = viewModel::onRegisterClicked,
             enabled = !state.isLoading,
@@ -88,13 +91,11 @@ fun RegisterScreen(
             Text("Registrarse")
         }
 
-        // Loading spinner
         if (state.isLoading) {
             Spacer(modifier = Modifier.height(16.dp))
             CircularProgressIndicator()
         }
 
-        // Error message
         state.error?.let { mensaje ->
             Spacer(modifier = Modifier.height(16.dp))
             Text(
@@ -105,8 +106,7 @@ fun RegisterScreen(
 
         Spacer(modifier = Modifier.height(16.dp))
 
-        // Login link
-        TextButton(onClick = { /* Login */ }) {
+        TextButton(onClick = onNavigateToLogin) {
             Text("¿Ya tienes una cuenta? Inicia sesión")
         }
     }

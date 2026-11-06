@@ -7,6 +7,7 @@ import com.gymlog.app.data.model.ExerciseSet
 import com.gymlog.app.data.model.WorkoutExercise
 import com.gymlog.app.data.repository.AuthRepository
 import com.gymlog.app.data.repository.WorkoutRepository
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -20,12 +21,11 @@ data class CreateWorkoutUiState(
     val description: String = "",
     val exercises: List<WorkoutExercise> = emptyList(),
     val elapsedSeconds: Int = 0,
-    val isTimerRunning: Boolean = true,
+    val isTimerRunning: Boolean = false,
     val isLoading: Boolean = false,
     val error: String? = null,
     val saveSuccess: Boolean = false,
     val discardSuccess: Boolean = false,
-    val progressCount: Int = 0,
 
     val isExerciseDialogVisible: Boolean = false,
     val isLoadingExercises: Boolean = false,
@@ -35,7 +35,10 @@ data class CreateWorkoutUiState(
     val searchQuery: String = "",
     val selectedMuscleGroup: String? = null,
 
-    val expandedSet: Pair<Int, Int>? = null
+    val expandedSet: Pair<Int, Int>? = null,
+
+    // exerciseName -> (setIndex -> set) with the most recent data for each position
+    val previousSetsByExercise: Map<String, Map<Int, ExerciseSet>> = emptyMap()
 )
 
 class CreateWorkoutViewModel : ViewModel() {
@@ -46,12 +49,14 @@ class CreateWorkoutViewModel : ViewModel() {
     private val _state = MutableStateFlow(CreateWorkoutUiState())
     val state: StateFlow<CreateWorkoutUiState> = _state.asStateFlow()
 
+    // Reference to the timer to cancel it when needed
+    private var timerJob: Job? = null
+
     init {
-        startTimer()
         loadExercises()
+        loadPreviousSets()
     }
 
-    // Load exercises from Firestore
     private fun loadExercises() {
         viewModelScope.launch {
             _state.update { it.copy(isLoadingExercises = true) }
@@ -66,8 +71,35 @@ class CreateWorkoutViewModel : ViewModel() {
         }
     }
 
-    private fun startTimer() {
+    fun reloadExercisesIfNeeded() {
+        if (_state.value.availableExercises.isEmpty() && !_state.value.isLoadingExercises) {
+            loadExercises()
+        }
+        loadPreviousSets()
+    }
+
+    private fun loadPreviousSets() {
         viewModelScope.launch {
+            val uid = authRepository.getCurrentUserId() ?: return@launch
+            workoutRepository.getPreviousSetsByExercise(uid).fold(
+                onSuccess = { map ->
+                    _state.update { it.copy(previousSetsByExercise = map) }
+                },
+                onFailure = { }
+            )
+        }
+    }
+
+    fun startWorkoutIfNeeded() {
+        if (_state.value.exercises.isEmpty() && _state.value.elapsedSeconds == 0) {
+            _state.update { it.copy(isTimerRunning = true) }
+            startTimer()
+        }
+    }
+
+    private fun startTimer() {
+        timerJob?.cancel()
+        timerJob = viewModelScope.launch {
             while (true) {
                 delay(1000.milliseconds)
                 if (_state.value.isTimerRunning) {
@@ -167,9 +199,19 @@ class CreateWorkoutViewModel : ViewModel() {
 
     fun onRemoveExercise(exerciseIndex: Int) {
         _state.update { currentState ->
+            val exerciseToRemove = currentState.exercises.getOrNull(exerciseIndex)?.exerciseName
             val newExercises = currentState.exercises.filterIndexed { i, _ -> i != exerciseIndex }
             val newExpanded = if (currentState.expandedSet?.first == exerciseIndex) null else currentState.expandedSet
-            currentState.copy(exercises = newExercises, expandedSet = newExpanded)
+
+            val newPreviousMap = exerciseToRemove?.let {
+                currentState.previousSetsByExercise - it
+            } ?: currentState.previousSetsByExercise
+
+            currentState.copy(
+                exercises = newExercises,
+                expandedSet = newExpanded,
+                previousSetsByExercise = newPreviousMap
+            )
         }
     }
 
@@ -255,7 +297,36 @@ class CreateWorkoutViewModel : ViewModel() {
             val updatedSets = exercise.sets.toMutableList()
             val set = updatedSets[setIndex]
             val wasCompleted = set.isCompleted
-            updatedSets[setIndex] = set.copy(isCompleted = !set.isCompleted)
+
+            val newSet = if (!wasCompleted) {
+                // If completing the set and it has no real data, use ghost data
+                val ghostSets = currentState.previousSetsByExercise[exercise.exerciseName]
+
+                // Count how many working sets (non-warmup) were completed before this one
+                val workingSetsBefore = updatedSets
+                    .take(setIndex)
+                    .count { !it.isWarmup && it.isCompleted }
+
+                val ghost = if (set.isWarmup) {
+                    null
+                } else {
+                    ghostSets?.get(workingSetsBefore)
+                }
+
+                // Use ghost weight/reps if the current set is empty
+                val weightToUse = if (set.weight == 0.0 && ghost != null) ghost.weight else set.weight
+                val repsToUse = if (set.reps == 0 && ghost != null) ghost.reps else set.reps
+
+                set.copy(
+                    isCompleted = true,
+                    weight = weightToUse,
+                    reps = repsToUse
+                )
+            } else {
+                set.copy(isCompleted = false)
+            }
+
+            updatedSets[setIndex] = newSet
             updatedExercises[exerciseIndex] = exercise.copy(sets = updatedSets)
 
             var newExpanded = currentState.expandedSet
@@ -280,7 +351,6 @@ class CreateWorkoutViewModel : ViewModel() {
             return
         }
 
-        // Generate a default title if blank
         val finalTitle = if (currentState.title.isBlank()) {
             val formatter = java.text.SimpleDateFormat("HH:mm", java.util.Locale.getDefault())
             "Entreno a las ${formatter.format(java.util.Date())}"
@@ -295,7 +365,23 @@ class CreateWorkoutViewModel : ViewModel() {
             val user = authRepository.getUserProfile(uid).getOrThrow()
 
             val workingExercises = currentState.exercises.map { exercise ->
-                exercise.copy(sets = exercise.sets.filter { !it.isWarmup })
+                val ghostSets = currentState.previousSetsByExercise[exercise.exerciseName]
+
+                val processedSets = exercise.sets
+                    .filter { !it.isWarmup }
+                    .mapIndexed { index, set ->
+                        val ghost = ghostSets?.get(index)
+                        val weightToUse = if (set.weight == 0.0 && ghost != null) ghost.weight else set.weight
+                        val repsToUse = if (set.reps == 0 && ghost != null) ghost.reps else set.reps
+
+                        set.copy(
+                            weight = weightToUse,
+                            reps = repsToUse,
+                            isCompleted = true
+                        )
+                    }
+
+                exercise.copy(sets = processedSets)
             }.filter { it.sets.isNotEmpty() }
 
             val durationMinutes = currentState.elapsedSeconds / 60
@@ -303,18 +389,6 @@ class CreateWorkoutViewModel : ViewModel() {
                 ex.sets.sumOf { set -> set.reps * set.weight }
             }
             val totalSets = workingExercises.sumOf { it.sets.size }
-
-            // Calculate progress count comparing with mock previous sets
-            var progressCount = 0
-            workingExercises.forEach { exercise ->
-                val mockPrevious = getMockPreviousSets(exercise.exerciseName)
-                exercise.sets.forEachIndexed { index, set ->
-                    val previousSet = mockPrevious.getOrNull(index)
-                    if (previousSet != null && (set.weight > previousSet.weight || set.reps > previousSet.reps)) {
-                        progressCount++
-                    }
-                }
-            }
 
             val result = workoutRepository.saveWorkout(
                 userId = uid,
@@ -325,35 +399,31 @@ class CreateWorkoutViewModel : ViewModel() {
                 durationMinutes = durationMinutes,
                 totalVolume = totalVolume,
                 totalSets = totalSets,
-                progressCount = progressCount,
                 exercises = workingExercises
             )
 
-            result.fold(
-                onSuccess = {
-                    _state.update { it.copy(isLoading = false, saveSuccess = true, progressCount = progressCount) }
-                },
-                onFailure = { error ->
+            result
+                .onSuccess {
+                    timerJob?.cancel()
+                    _state.value = CreateWorkoutUiState(saveSuccess = true)
+                }
+                .onFailure { error ->
                     _state.update { it.copy(isLoading = false, error = error.message) }
                 }
-            )
         }
+    }
+
+    fun onSaveHandled() {
+        _state.update { it.copy(saveSuccess = false) }
     }
 
     fun onDiscardWorkout() {
-        _state.update {
-            CreateWorkoutUiState(discardSuccess = true)
-        }
+        timerJob?.cancel()
+        timerJob = null
+        _state.value = CreateWorkoutUiState(discardSuccess = true)
     }
 
-    private fun getMockPreviousSets(exerciseName: String): List<ExerciseSet> {
-        return when {
-            exerciseName.contains("Barbell Bench Press", ignoreCase = true) -> listOf(
-                ExerciseSet(reps = 10, weight = 60.0),
-                ExerciseSet(reps = 8, weight = 80.0),
-                ExerciseSet(reps = 6, weight = 85.0)
-            )
-            else -> emptyList()
-        }
+    fun onDiscardHandled() {
+        _state.update { it.copy(discardSuccess = false) }
     }
 }

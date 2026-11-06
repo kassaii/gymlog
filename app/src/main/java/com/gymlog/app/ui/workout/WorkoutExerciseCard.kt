@@ -23,6 +23,7 @@ import androidx.compose.material.icons.filled.KeyboardArrowDown
 import androidx.compose.material.icons.filled.KeyboardArrowUp
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Repeat
+import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.TrendingUp
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -417,48 +418,76 @@ private fun SetRow(
                 val weightDiff = if (previous != null && !set.isWarmup) displayWeight - previous.weight else 0.0
                 val repsDiff = if (previous != null && !set.isWarmup) displayReps - previous.reps else 0
 
+                val progressText = when {
+                    set.isWarmup -> "-"
+
+                    weightDiff < -0.001 && repsDiff > 0 ->
+                        "${NumberFormatter.toDisplay(weightDiff)} / +$repsDiff"
+
+                    weightDiff > 0.001 -> "▲ +${NumberFormatter.toDisplay(weightDiff)} kg"
+                    weightDiff < -0.001 -> "▼ ${NumberFormatter.toDisplay(weightDiff)} kg"
+                    repsDiff > 0 -> if (repsDiff == 1) "▲ +1 rep" else "▲ +$repsDiff reps"
+                    repsDiff < 0 -> {
+                        val absReps = kotlin.math.abs(repsDiff)
+                        if (absReps == 1) "▼ -1 rep" else "▼ -$absReps reps"
+                    }
+                    else -> "-"
+                }
+
+                val progressTextColor = when {
+                    set.isWarmup -> workoutColors.warmup.copy(alpha = 0.7f)
+                    weightDiff > 0.001 -> workoutColors.up
+                    weightDiff == 0.0 && repsDiff > 0 -> workoutColors.up
+                    weightDiff < -0.001 && repsDiff > 0 -> MaterialTheme.colorScheme.onSurfaceVariant
+                    weightDiff < -0.001 -> workoutColors.down
+                    weightDiff == 0.0 && repsDiff < 0 -> workoutColors.down
+                    else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                }
+
+                val progressBackground = when {
+                    set.isWarmup -> workoutColors.warmup.copy(alpha = 0.15f)
+                    set.isCompleted && (weightDiff > 0.001 || repsDiff > 0) -> MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
+                    weightDiff > 0.001 -> workoutColors.upBackground
+                    weightDiff == 0.0 && repsDiff > 0 -> workoutColors.upBackground
+                    weightDiff < -0.001 && repsDiff > 0 -> MaterialTheme.colorScheme.surfaceVariant
+                    weightDiff < -0.001 -> workoutColors.downBackground
+                    weightDiff == 0.0 && repsDiff < 0 -> workoutColors.downBackground
+                    else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)
+                }
+
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
                         .clip(RoundedCornerShape(6.dp))
-                        .background(
-                            when {
-                                set.isWarmup -> workoutColors.warmup.copy(alpha = 0.15f)
-                                set.isCompleted && (weightDiff > 0.001 || repsDiff > 0) -> MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
-                                weightDiff > 0.001 || repsDiff > 0 -> workoutColors.upBackground
-                                weightDiff < -0.001 || repsDiff < 0 -> workoutColors.downBackground
-                                else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)
-                            }
-                        )
-                        .padding(vertical = 4.dp),
+                        .background(progressBackground)
+                        .padding(horizontal = 4.dp, vertical = 4.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    val text = when {
-                        set.isWarmup -> "-"
-                        weightDiff > 0.001 -> "▲ +${NumberFormatter.toDisplay(weightDiff)} kg"
-                        weightDiff < -0.001 -> "▼ ${NumberFormatter.toDisplay(weightDiff)} kg"
-                        repsDiff > 0 -> if (repsDiff == 1) "▲ +1 rep" else "▲ +$repsDiff reps"
-                        repsDiff < 0 -> {
-                            val absReps = kotlin.math.abs(repsDiff)
-                            if (absReps == 1) "▼ -1 rep" else "▼ -$absReps reps"
-                        }
-                        else -> "-"
-                    }
+                    val isMixedSignal = weightDiff < -0.001 && repsDiff > 0
 
-                    Text(
-                        text = text,
-                        style = MaterialTheme.typography.labelLarge,
-                        fontWeight = FontWeight.Bold,
-                        color = when {
-                            set.isWarmup -> workoutColors.warmup.copy(alpha = 0.7f)
-                            weightDiff > 0.001 || repsDiff > 0 -> workoutColors.up
-                            weightDiff < -0.001 || repsDiff < 0 -> workoutColors.down
-                            else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
-                        },
-                        maxLines = 1,
-                        softWrap = false,
-                        textAlign = TextAlign.Center
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center
+                    ) {
+                        if (isMixedSignal) {
+                            Icon(
+                                imageVector = Icons.Default.SwapVert,
+                                contentDescription = null,
+                                modifier = Modifier.size(14.dp),
+                                tint = progressTextColor
+                            )
+                            Spacer(modifier = Modifier.width(2.dp))
+                        }
+                        Text(
+                            text = progressText,
+                            style = MaterialTheme.typography.labelLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = progressTextColor,
+                            maxLines = 1,
+                            softWrap = false,
+                            textAlign = TextAlign.Center
+                        )
+                    }
                 }
             }
 
