@@ -95,6 +95,25 @@ class WorkoutRepository {
         }
     }
 
+    // Gets the most recent workouts from all users (for the Explore feed)
+    suspend fun getRecentWorkouts(limit: Long = 50): Result<List<Workout>> {
+        return try {
+            val snapshot = workoutsCollection
+                .orderBy("date", Query.Direction.DESCENDING)
+                .limit(limit)
+                .get()
+                .await()
+
+            val workouts = snapshot.documents.mapNotNull { doc ->
+                doc.toObject(Workout::class.java)?.copy(id = doc.id)
+            }
+
+            Result.success(workouts)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun deleteWorkout(workoutId: String): Result<Unit> {
         return try {
             workoutsCollection.document(workoutId).delete().await()
