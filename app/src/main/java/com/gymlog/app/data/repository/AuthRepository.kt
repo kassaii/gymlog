@@ -39,7 +39,8 @@ class AuthRepository {
                 weightUnit = "kg",
                 createdAt = System.currentTimeMillis(),
                 followersCount = 0,
-                followingCount = 0
+                followingCount = 0,
+                followingIds = emptyList()
             )
 
             usersCollection.document(uid).set(newUser).await()

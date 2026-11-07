@@ -44,4 +44,15 @@ class UserRepository {
             Result.failure(e)
         }
     }
+
+    // Gets the list of user IDs that the given user follows
+    suspend fun getFollowingIds(uid: String): Result<List<String>> {
+        return try {
+            val document = usersCollection.document(uid).get().await()
+            val user = document.toObject(User::class.java)
+            Result.success(user?.followingIds ?: emptyList())
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }

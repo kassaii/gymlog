@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.gymlog.app.data.model.User
 import com.gymlog.app.data.model.Workout
+import com.gymlog.app.data.repository.AuthRepository
 import com.gymlog.app.data.repository.UserRepository
 import com.gymlog.app.data.repository.WorkoutRepository
 import kotlinx.coroutines.Job
@@ -28,14 +29,30 @@ class ExploreFeedViewModel : ViewModel() {
 
     private val workoutRepository = WorkoutRepository()
     private val userRepository = UserRepository()
+    private val authRepository = AuthRepository()
 
     private val _state = MutableStateFlow(ExploreFeedUiState())
     val state: StateFlow<ExploreFeedUiState> = _state.asStateFlow()
 
     private var searchJob: Job? = null
 
+    private var myFollowingIds: Set<String> = emptySet()
+    private var currentUserId: String? = null
+
     init {
         loadFeed()
+        loadUserContext()
+    }
+
+    private fun loadUserContext() {
+        viewModelScope.launch {
+            currentUserId = authRepository.getCurrentUserId()
+            currentUserId?.let { uid ->
+                userRepository.getFollowingIds(uid).onSuccess { ids ->
+                    myFollowingIds = ids.toSet()
+                }
+            }
+        }
     }
 
     fun loadFeed() {
@@ -78,7 +95,18 @@ class ExploreFeedViewModel : ViewModel() {
 
             userRepository.searchUsers(query).fold(
                 onSuccess = { users ->
-                    _state.update { it.copy(searchedUsers = users, isSearchingUsers = false) }
+                    val sortedUsers = users.sortedWith(
+                        compareByDescending<User> {
+                            it.uid == currentUserId || myFollowingIds.contains(it.uid)
+                        }
+                            .thenByDescending {
+                                it.followersCount
+                            }
+                            .thenBy {
+                                it.username.lowercase()
+                            }
+                    )
+                    _state.update { it.copy(searchedUsers = sortedUsers, isSearchingUsers = false) }
                 },
                 onFailure = { e ->
                     _state.update { it.copy(error = e.message, isSearchingUsers = false) }

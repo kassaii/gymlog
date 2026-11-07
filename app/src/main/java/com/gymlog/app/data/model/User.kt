@@ -14,5 +14,7 @@ data class User(
     val weightUnit: String = "kg",
     val createdAt: Long = 0L,
     val followersCount: Int = 0,
-    val followingCount: Int = 0
+    val followingCount: Int = 0,
+    val followingIds: List<String> = emptyList()
+
 )
