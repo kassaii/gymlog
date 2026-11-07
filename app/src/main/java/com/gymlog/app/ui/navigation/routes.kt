@@ -20,6 +20,11 @@ object Routes {
     const val EXPLORE = "explore"
     const val FOLLOWING = "following"
 
+    // User Profiles (for viewing other users)
+    const val USER_ID = "userId"
+    const val USER_PROFILE = "user_profile/{$USER_ID}"
+    fun userProfile(userId: String) = "user_profile/$userId"
+
     // Settings
     const val SETTINGS = "settings"
 }

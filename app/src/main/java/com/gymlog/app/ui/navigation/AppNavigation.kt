@@ -4,6 +4,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -12,6 +13,9 @@ import androidx.navigation.navArgument
 import com.gymlog.app.ui.auth.LoginScreen
 import com.gymlog.app.ui.auth.RegisterScreen
 import com.gymlog.app.ui.main.MainScreen
+import com.gymlog.app.ui.profile.UserProfileScreen
+import com.gymlog.app.ui.profile.UserProfileViewModel
+import com.gymlog.app.ui.profile.UserProfileViewModelFactory
 import com.gymlog.app.ui.workout.CreateWorkoutScreen
 import com.gymlog.app.ui.workout.CreateWorkoutViewModel
 import com.gymlog.app.ui.workout.WorkoutDetailScreen
@@ -101,6 +105,25 @@ fun AppNavigation(
                     }
                     navController.popBackStack()
                 }
+            )
+        }
+
+        composable(
+            route = Routes.USER_PROFILE,
+            arguments = listOf(navArgument(Routes.USER_ID) { type = NavType.StringType })
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString(Routes.USER_ID) ?: ""
+
+            val viewModel: UserProfileViewModel = viewModel(
+                factory = UserProfileViewModelFactory(userId)
+            )
+
+            UserProfileScreen(
+                onBack = { navController.popBackStack() },
+                onWorkoutClick = { workoutId ->
+                    navController.navigate(Routes.workoutDetail(workoutId))
+                },
+                viewModel = viewModel
             )
         }
     }

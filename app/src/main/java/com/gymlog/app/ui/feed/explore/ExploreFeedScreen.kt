@@ -43,7 +43,6 @@ fun ExploreFeedScreen(
     val state by viewModel.state.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
-    // Handle back press to close the search bar if it's active
     BackHandler(enabled = state.isSearchActive) {
         viewModel.onSearchToggle()
     }
@@ -60,10 +59,8 @@ fun ExploreFeedScreen(
                             onQueryChange = viewModel::onSearchQueryChange,
                             onSearch = { },
                             expanded = state.isSearchActive,
-                            // IMPORTANT: Only close if we actually want to
                             onExpandedChange = { isExpanded ->
                                 if (!isExpanded) {
-                                    // We handle closing ourselves with the X button or BackHandler
                                 }
                             },
                             placeholder = { Text("Buscar usuarios...") },
@@ -76,10 +73,8 @@ fun ExploreFeedScreen(
                         )
                     },
                     expanded = state.isSearchActive,
-                    // Same here: ignore the internal collapse event
                     onExpandedChange = { isExpanded ->
                         if (!isExpanded) {
-                            // Ignored, handled by X button or BackHandler
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),

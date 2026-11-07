@@ -55,4 +55,66 @@ class UserRepository {
             Result.failure(e)
         }
     }
+
+    // Follows a user using a batch to update both users atomically
+    suspend fun followUser(currentUid: String, targetUid: String): Result<Unit> {
+        return try {
+            val currentUserRef = usersCollection.document(currentUid)
+            val targetUserRef = usersCollection.document(targetUid)
+
+            val currentUser = currentUserRef.get().await().toObject(User::class.java)
+                ?: return Result.failure(Exception("Usuario actual no encontrado"))
+
+            val targetUser = targetUserRef.get().await().toObject(User::class.java)
+                ?: return Result.failure(Exception("Usuario objetivo no encontrado"))
+
+            if (currentUser.followingIds.contains(targetUid)) {
+                return Result.success(Unit)
+            }
+
+            val newFollowingIds = currentUser.followingIds + targetUid
+            val newFollowersCount = targetUser.followersCount + 1
+
+            val batch = firestore.batch()
+            batch.update(currentUserRef, "followingIds", newFollowingIds)
+            batch.update(currentUserRef, "followingCount", newFollowingIds.size)
+            batch.update(targetUserRef, "followersCount", newFollowersCount)
+            batch.commit().await()
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // Unfollows a user using a batch
+    suspend fun unfollowUser(currentUid: String, targetUid: String): Result<Unit> {
+        return try {
+            val currentUserRef = usersCollection.document(currentUid)
+            val targetUserRef = usersCollection.document(targetUid)
+
+            val currentUser = currentUserRef.get().await().toObject(User::class.java)
+                ?: return Result.failure(Exception("Usuario actual no encontrado"))
+
+            val targetUser = targetUserRef.get().await().toObject(User::class.java)
+                ?: return Result.failure(Exception("Usuario objetivo no encontrado"))
+
+            if (!currentUser.followingIds.contains(targetUid)) {
+                return Result.success(Unit)
+            }
+
+            val newFollowingIds = currentUser.followingIds - targetUid
+            val newFollowersCount = (targetUser.followersCount - 1).coerceAtLeast(0)
+
+            val batch = firestore.batch()
+            batch.update(currentUserRef, "followingIds", newFollowingIds)
+            batch.update(currentUserRef, "followingCount", newFollowingIds.size)
+            batch.update(targetUserRef, "followersCount", newFollowersCount)
+            batch.commit().await()
+
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }
