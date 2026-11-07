@@ -93,7 +93,7 @@ fun UserProfileScreen(
 
                         if (state.isFollowLoading) {
                             CircularProgressIndicator(modifier = Modifier.size(24.dp))
-                        } else {
+                        } else if (!state.isOwnProfile) {
                             Button(
                                 onClick = viewModel::toggleFollow,
                                 colors = ButtonDefaults.buttonColors(

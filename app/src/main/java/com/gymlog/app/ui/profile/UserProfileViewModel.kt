@@ -18,6 +18,7 @@ data class UserProfileUiState(
     val user: User? = null,
     val workouts: List<Workout> = emptyList(),
     val isFollowing: Boolean = false,
+    val isOwnProfile: Boolean = false,
     val isLoading: Boolean = true,
     val isFollowLoading: Boolean = false,
     val error: String? = null
@@ -44,7 +45,6 @@ class UserProfileViewModel(
         }
     }
 
-    // New suspend function that actually does the fetching
     private suspend fun fetchProfileData() {
         _state.update { it.copy(isLoading = true, error = null) }
 
@@ -61,11 +61,14 @@ class UserProfileViewModel(
         val currentUserResult = userRepository.getUserProfile(currentUid)
         val isFollowing = currentUserResult.getOrNull()?.followingIds?.contains(targetUid) ?: false
 
+        val isOwnProfile = currentUid == targetUid
+
         _state.update {
             it.copy(
                 user = userResult.getOrNull(),
                 workouts = workoutsResult.getOrDefault(emptyList()),
                 isFollowing = isFollowing,
+                isOwnProfile = isOwnProfile,
                 isLoading = false
             )
         }

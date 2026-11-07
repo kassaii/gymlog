@@ -113,6 +113,7 @@ fun ExploreFeedScreen(
                 }
             } else {
                 TopAppBar(
+                    windowInsets = WindowInsets(0),
                     scrollBehavior = scrollBehavior,
                     colors = TopAppBarDefaults.topAppBarColors(
                         containerColor = MaterialTheme.colorScheme.background,

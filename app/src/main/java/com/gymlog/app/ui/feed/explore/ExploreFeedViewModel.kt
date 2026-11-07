@@ -14,6 +14,7 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
 
 data class ExploreFeedUiState(
     val workouts: List<Workout> = emptyList(),
@@ -90,14 +91,16 @@ class ExploreFeedViewModel : ViewModel() {
         }
 
         searchJob = viewModelScope.launch {
-            delay(300)
+            delay(300.milliseconds)
             _state.update { it.copy(isSearchingUsers = true) }
 
             userRepository.searchUsers(query).fold(
                 onSuccess = { users ->
-                    val sortedUsers = users.sortedWith(
+                    val filteredUsers = users.filter { it.uid != currentUserId }
+
+                    val sortedUsers = filteredUsers.sortedWith(
                         compareByDescending<User> {
-                            it.uid == currentUserId || myFollowingIds.contains(it.uid)
+                            myFollowingIds.contains(it.uid)
                         }
                             .thenByDescending {
                                 it.followersCount

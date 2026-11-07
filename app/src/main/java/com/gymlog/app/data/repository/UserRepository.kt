@@ -58,6 +58,10 @@ class UserRepository {
 
     // Follows a user using a batch to update both users atomically
     suspend fun followUser(currentUid: String, targetUid: String): Result<Unit> {
+        if (currentUid == targetUid) {
+            return Result.failure(Exception("No puedes seguirte a ti mismo"))
+        }
+
         return try {
             val currentUserRef = usersCollection.document(currentUid)
             val targetUserRef = usersCollection.document(targetUid)
