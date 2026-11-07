@@ -114,6 +114,36 @@ class WorkoutRepository {
         }
     }
 
+    // Gets workouts from a list of userIds (the users the current user follows).
+    suspend fun getWorkoutsByFollowingIds(followingIds: List<String>): Result<List<Workout>> {
+        return try {
+            if (followingIds.isEmpty()) {
+                return Result.success(emptyList())
+            }
+
+            val allWorkouts = mutableListOf<Workout>()
+
+            followingIds.chunked(10).forEach { chunk ->
+                val snapshot = workoutsCollection
+                    .whereIn("userId", chunk)
+                    .orderBy("date", Query.Direction.DESCENDING)
+                    .limit(50)
+                    .get()
+                    .await()
+
+                val workouts = snapshot.documents.mapNotNull { doc ->
+                    doc.toObject(Workout::class.java)?.copy(id = doc.id)
+                }
+                allWorkouts.addAll(workouts)
+            }
+
+            val sorted = allWorkouts.sortedByDescending { it.date }
+            Result.success(sorted)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     suspend fun deleteWorkout(workoutId: String): Result<Unit> {
         return try {
             workoutsCollection.document(workoutId).delete().await()

@@ -21,7 +21,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavHostController
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.rememberNavController
 import com.gymlog.app.ui.feed.explore.ExploreFeedScreen
+import com.gymlog.app.ui.feed.following.FollowingFeedScreen
 import com.gymlog.app.ui.navigation.Routes
 import com.gymlog.app.ui.profile.ProfileScreen
 import com.gymlog.app.ui.workout.CreateWorkoutViewModel
@@ -34,6 +38,9 @@ fun MainScreen(
     reloadFeed: Boolean = false
 ) {
     var currentTab by rememberSaveable { mutableStateOf("home") }
+
+    // Internal NavController for the feed tabs
+    val feedNavController = rememberNavController()
 
     val workoutState by createWorkoutViewModel.state.collectAsStateWithLifecycle()
     val isWorkoutActive = workoutState.exercises.isNotEmpty() || workoutState.elapsedSeconds > 0
@@ -51,7 +58,6 @@ fun MainScreen(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Home tab
                     BottomBarItem(
                         icon = Icons.Default.Home,
                         label = "Inicio",
@@ -59,7 +65,6 @@ fun MainScreen(
                         onClick = { currentTab = "home" }
                     )
 
-                    // Create / Return to workout
                     Box(
                         modifier = Modifier
                             .size(64.dp)
@@ -78,7 +83,6 @@ fun MainScreen(
                         )
                     }
 
-                    // Profile tab
                     BottomBarItem(
                         icon = Icons.Default.Person,
                         label = "Perfil",
@@ -91,16 +95,43 @@ fun MainScreen(
     ) { paddingValues ->
         Box(modifier = Modifier.padding(paddingValues)) {
             when (currentTab) {
-                "home" -> ExploreFeedScreen(
-                    onWorkoutClick = { workoutId ->
-                        navController.navigate(Routes.workoutDetail(workoutId))
-                    },
-                    onSwitchToFollowing = { },
-                    reloadKey = reloadFeed,
-                    onUserClick = { userId ->
-                        navController.navigate(Routes.userProfile(userId))
+                "home" -> {
+                    NavHost(
+                        navController = feedNavController,
+                        startDestination = "explore",
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        composable("explore") {
+                            ExploreFeedScreen(
+                                onWorkoutClick = { workoutId ->
+                                    navController.navigate(Routes.workoutDetail(workoutId))
+                                },
+                                onUserClick = { userId ->
+                                    navController.navigate(Routes.userProfile(userId))
+                                },
+                                onSwitchToFollowing = {
+                                    feedNavController.navigate("following")
+                                },
+                                reloadKey = reloadFeed
+                            )
+                        }
+                        composable("following") {
+                            FollowingFeedScreen(
+                                onWorkoutClick = { workoutId ->
+                                    navController.navigate(Routes.workoutDetail(workoutId))
+                                },
+                                onUserClick = { userId ->
+                                    navController.navigate(Routes.userProfile(userId))
+                                },
+                                onSwitchToExplore = {
+                                    feedNavController.navigate("explore") {
+                                        popUpTo("explore") { inclusive = true }
+                                    }
+                                }
+                            )
+                        }
                     }
-                )
+                }
                 "profile" -> ProfileScreen(
                     onWorkoutClick = { workoutId ->
                         navController.navigate(Routes.workoutDetail(workoutId))

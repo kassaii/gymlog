@@ -1,0 +1,133 @@
+package com.gymlog.app.ui.feed.following
+
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.viewModelScope
+import com.gymlog.app.data.model.User
+import com.gymlog.app.data.model.Workout
+import com.gymlog.app.data.repository.AuthRepository
+import com.gymlog.app.data.repository.UserRepository
+import com.gymlog.app.data.repository.WorkoutRepository
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
+
+data class FollowingFeedUiState(
+    val workouts: List<Workout> = emptyList(),
+    val searchedUsers: List<User> = emptyList(),
+    val isLoading: Boolean = true,
+    val isSearchingUsers: Boolean = false,
+    val error: String? = null,
+    val isSearchActive: Boolean = false,
+    val searchQuery: String = ""
+)
+
+class FollowingFeedViewModel : ViewModel() {
+
+    private val workoutRepository = WorkoutRepository()
+    private val userRepository = UserRepository()
+    private val authRepository = AuthRepository()
+
+    private val _state = MutableStateFlow(FollowingFeedUiState())
+    val state: StateFlow<FollowingFeedUiState> = _state.asStateFlow()
+
+    private var searchJob: Job? = null
+
+    private var myFollowingIds: Set<String> = emptySet()
+    private var currentUserId: String? = null
+
+    init {
+        loadFeed()
+        loadUserContext()
+    }
+
+    private fun loadUserContext() {
+        viewModelScope.launch {
+            currentUserId = authRepository.getCurrentUserId()
+            currentUserId?.let { uid ->
+                userRepository.getFollowingIds(uid).onSuccess { ids ->
+                    myFollowingIds = ids.toSet()
+                }
+            }
+        }
+    }
+
+    fun loadFeed() {
+        viewModelScope.launch {
+            _state.update { it.copy(isLoading = true, error = null) }
+
+            val currentUid = authRepository.getCurrentUserId()
+            if (currentUid == null) {
+                _state.update { it.copy(isLoading = false, error = "Usuario no autenticado") }
+                return@launch
+            }
+
+            userRepository.getFollowingIds(currentUid).fold(
+                onSuccess = { followingIds ->
+                    workoutRepository.getWorkoutsByFollowingIds(followingIds).fold(
+                        onSuccess = { workouts ->
+                            _state.update { it.copy(workouts = workouts, isLoading = false) }
+                        },
+                        onFailure = { e ->
+                            _state.update { it.copy(isLoading = false, error = e.message) }
+                        }
+                    )
+                },
+                onFailure = { e ->
+                    _state.update { it.copy(isLoading = false, error = e.message) }
+                }
+            )
+        }
+    }
+
+    fun onSearchToggle() {
+        _state.update {
+            if (it.isSearchActive) {
+                it.copy(isSearchActive = false, searchQuery = "", searchedUsers = emptyList())
+            } else {
+                it.copy(isSearchActive = true)
+            }
+        }
+    }
+
+    fun onSearchQueryChange(query: String) {
+        _state.update { it.copy(searchQuery = query) }
+
+        searchJob?.cancel()
+
+        if (query.isBlank()) {
+            _state.update { it.copy(searchedUsers = emptyList(), isSearchingUsers = false) }
+            return
+        }
+
+        searchJob = viewModelScope.launch {
+            delay(300.milliseconds)
+            _state.update { it.copy(isSearchingUsers = true) }
+
+            userRepository.searchUsers(query).fold(
+                onSuccess = { users ->
+                    val filteredUsers = users.filter { it.uid != currentUserId }
+                    val sortedUsers = filteredUsers.sortedWith(
+                        compareByDescending<User> {
+                            myFollowingIds.contains(it.uid)
+                        }
+                            .thenByDescending {
+                                it.followersCount
+                            }
+                            .thenBy {
+                                it.username.lowercase()
+                            }
+                    )
+                    _state.update { it.copy(searchedUsers = sortedUsers, isSearchingUsers = false) }
+                },
+                onFailure = { e ->
+                    _state.update { it.copy(error = e.message, isSearchingUsers = false) }
+                }
+            )
+        }
+    }
+}
