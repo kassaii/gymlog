@@ -50,6 +50,7 @@ fun ExploreFeedScreen(
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
         containerColor = MaterialTheme.colorScheme.background,
+        contentWindowInsets = WindowInsets(0),
         topBar = {
             if (state.isSearchActive) {
                 SearchBar(
