@@ -7,24 +7,15 @@ import com.gymlog.app.util.Constants
 import kotlinx.coroutines.tasks.await
 
 // Repository responsible for user authentication
-
 class AuthRepository {
 
-    // Instance to manage authentication
     private val auth: FirebaseAuth = FirebaseAuth.getInstance()
-
-    // Firestore service instance to manage the database
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
-
-    // Shortcut to access the users collection
     private val usersCollection = firestore.collection("users")
 
-    // Function to register a new user
-    // Uses suspend and await() to avoid blocking the main thread
-    // Uses Result to wrap the outcome as success (User) or failure (exception)
+    // Registers a new user in Firebase Auth and creates their profile in Firestore
     suspend fun register(email: String, password: String, username: String): Result<User> {
         return try {
-            // Check if the username already exists
             val usernameLower = username.lowercase()
             val existing = usersCollection
                 .whereEqualTo("usernameLower", usernameLower)
@@ -35,13 +26,10 @@ class AuthRepository {
                 return Result.failure(Exception("El nombre de usuario ya está en uso"))
             }
 
-            // Create account in Firebase Auth
-            // Returns an error if the User is null
             val authResult = auth.createUserWithEmailAndPassword(email, password).await()
             val uid = authResult.user?.uid
                 ?: return Result.failure(Exception("No se pudo crear el usuario"))
 
-            // Register user in Firestore
             val newUser = User(
                 uid = uid,
                 email = email,
@@ -54,56 +42,37 @@ class AuthRepository {
                 followingCount = 0
             )
 
-            // Save the user profile in Firestore
             usersCollection.document(uid).set(newUser).await()
 
             Result.success(newUser)
-
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    // Function to log in a user
+    // Logs in a user and retrieves their profile from Firestore
     suspend fun login(email: String, password: String): Result<User> {
         return try {
-
-            // Get the uid using email and password
             val authResult = auth.signInWithEmailAndPassword(email, password).await()
             val uid = authResult.user?.uid
                 ?: return Result.failure(Exception("Credenciales incorrectas"))
 
-            // Convert Firestore document to object
-            // Returns an error if the user document does not exist in Firestore
             val document = usersCollection.document(uid).get().await()
             val user = document.toObject(User::class.java)
                 ?: return Result.failure(Exception("Perfil de usuario no encontrado"))
 
             Result.success(user)
-
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
-    // Gets a user's profile from their uid
-    suspend fun getUserProfile(uid: String): Result<User> {
-        return try {
-            val document = usersCollection.document(uid).get().await()
-            val user = document.toObject(User::class.java)
-                ?: return Result.failure(Exception("Perfil no encontrado"))
-            Result.success(user)
-        } catch (e: Exception) {
-            Result.failure(e)
-        }
-    }
-
-    // Logs out the user
+    // Signs out the current user
     fun logout() {
         auth.signOut()
     }
 
-    // Returns the logged-in user's uid or null if no user is logged in
+    // Returns the current user's ID or null if not logged in
     fun getCurrentUserId(): String? {
         return auth.currentUser?.uid
     }

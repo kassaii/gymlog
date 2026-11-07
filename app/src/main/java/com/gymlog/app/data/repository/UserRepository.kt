@@ -1,0 +1,24 @@
+package com.gymlog.app.data.repository
+
+import com.gymlog.app.data.model.User
+import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.tasks.await
+
+// Repository responsible for user data
+class UserRepository {
+
+    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
+    private val usersCollection = firestore.collection("users")
+
+    // Gets a user's profile from their uid
+    suspend fun getUserProfile(uid: String): Result<User> {
+        return try {
+            val document = usersCollection.document(uid).get().await()
+            val user = document.toObject(User::class.java)
+                ?: return Result.failure(Exception("Perfil no encontrado"))
+            Result.success(user)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+}
