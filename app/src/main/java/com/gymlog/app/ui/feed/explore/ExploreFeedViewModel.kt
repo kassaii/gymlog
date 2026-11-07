@@ -2,8 +2,12 @@ package com.gymlog.app.ui.feed.explore
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.gymlog.app.data.model.User
 import com.gymlog.app.data.model.Workout
+import com.gymlog.app.data.repository.UserRepository
 import com.gymlog.app.data.repository.WorkoutRepository
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -12,7 +16,9 @@ import kotlinx.coroutines.launch
 
 data class ExploreFeedUiState(
     val workouts: List<Workout> = emptyList(),
+    val searchedUsers: List<User> = emptyList(),
     val isLoading: Boolean = true,
+    val isSearchingUsers: Boolean = false,
     val error: String? = null,
     val isSearchActive: Boolean = false,
     val searchQuery: String = ""
@@ -21,9 +27,12 @@ data class ExploreFeedUiState(
 class ExploreFeedViewModel : ViewModel() {
 
     private val workoutRepository = WorkoutRepository()
+    private val userRepository = UserRepository()
 
     private val _state = MutableStateFlow(ExploreFeedUiState())
     val state: StateFlow<ExploreFeedUiState> = _state.asStateFlow()
+
+    private var searchJob: Job? = null
 
     init {
         loadFeed()
@@ -32,7 +41,6 @@ class ExploreFeedViewModel : ViewModel() {
     fun loadFeed() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
-
             workoutRepository.getRecentWorkouts().fold(
                 onSuccess = { workouts ->
                     _state.update { it.copy(workouts = workouts, isLoading = false) }
@@ -47,7 +55,7 @@ class ExploreFeedViewModel : ViewModel() {
     fun onSearchToggle() {
         _state.update {
             if (it.isSearchActive) {
-                it.copy(isSearchActive = false, searchQuery = "")
+                it.copy(isSearchActive = false, searchQuery = "", searchedUsers = emptyList())
             } else {
                 it.copy(isSearchActive = true)
             }
@@ -56,5 +64,26 @@ class ExploreFeedViewModel : ViewModel() {
 
     fun onSearchQueryChange(query: String) {
         _state.update { it.copy(searchQuery = query) }
+
+        searchJob?.cancel()
+
+        if (query.isBlank()) {
+            _state.update { it.copy(searchedUsers = emptyList(), isSearchingUsers = false) }
+            return
+        }
+
+        searchJob = viewModelScope.launch {
+            delay(300)
+            _state.update { it.copy(isSearchingUsers = true) }
+
+            userRepository.searchUsers(query).fold(
+                onSuccess = { users ->
+                    _state.update { it.copy(searchedUsers = users, isSearchingUsers = false) }
+                },
+                onFailure = { e ->
+                    _state.update { it.copy(error = e.message, isSearchingUsers = false) }
+                }
+            )
+        }
     }
 }

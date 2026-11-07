@@ -96,7 +96,8 @@ fun MainScreen(
                         navController.navigate(Routes.workoutDetail(workoutId))
                     },
                     onSwitchToFollowing = { },
-                    reloadKey = reloadFeed
+                    reloadKey = reloadFeed,
+                    onUserClick = { userId -> }
                 )
                 "profile" -> ProfileScreen(
                     onWorkoutClick = { workoutId ->

@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.gymlog.app.data.model.User
 import com.gymlog.app.data.model.Workout
 import com.gymlog.app.data.repository.AuthRepository
+import com.gymlog.app.data.repository.UserRepository
 import com.gymlog.app.data.repository.WorkoutRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -22,6 +23,7 @@ data class ProfileUiState(
 class ProfileViewModel : ViewModel() {
 
     private val authRepository = AuthRepository()
+    private val userRepository = UserRepository()
     private val workoutRepository = WorkoutRepository()
 
     private val _state = MutableStateFlow(ProfileUiState())
@@ -42,7 +44,7 @@ class ProfileViewModel : ViewModel() {
             }
 
             // Load user profile
-            val userResult = authRepository.getUserProfile(uid)
+            val userResult = userRepository.getUserProfile(uid)
             if (userResult.isFailure) {
                 _state.update { it.copy(isLoading = false, error = userResult.exceptionOrNull()?.message) }
                 return@launch

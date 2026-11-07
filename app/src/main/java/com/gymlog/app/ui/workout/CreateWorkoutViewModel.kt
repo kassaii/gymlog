@@ -6,6 +6,7 @@ import com.gymlog.app.data.model.Exercise
 import com.gymlog.app.data.model.ExerciseSet
 import com.gymlog.app.data.model.WorkoutExercise
 import com.gymlog.app.data.repository.AuthRepository
+import com.gymlog.app.data.repository.UserRepository
 import com.gymlog.app.data.repository.WorkoutRepository
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -44,6 +45,7 @@ data class CreateWorkoutUiState(
 class CreateWorkoutViewModel : ViewModel() {
 
     private val workoutRepository = WorkoutRepository()
+    private val userRepository = UserRepository()
     private val authRepository = AuthRepository()
 
     private val _state = MutableStateFlow(CreateWorkoutUiState())
@@ -362,7 +364,7 @@ class CreateWorkoutViewModel : ViewModel() {
             _state.update { it.copy(isLoading = true, error = null, isTimerRunning = false) }
 
             val uid = authRepository.getCurrentUserId()!!
-            val user = authRepository.getUserProfile(uid).getOrThrow()
+            val user = userRepository.getUserProfile(uid).getOrThrow()
 
             val workingExercises = currentState.exercises.map { exercise ->
                 val ghostSets = currentState.previousSetsByExercise[exercise.exerciseName]

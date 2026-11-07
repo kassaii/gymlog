@@ -21,4 +21,27 @@ class UserRepository {
             Result.failure(e)
         }
     }
+
+    // Searches for users by username prefix
+    suspend fun searchUsers(query: String): Result<List<User>> {
+        return try {
+            if (query.isBlank()) return Result.success(emptyList())
+
+            val queryLower = query.lowercase()
+            val snapshot = usersCollection
+                .orderBy("usernameLower")
+                .startAt(queryLower)
+                .endAt(queryLower + "\uf8ff")
+                .limit(20)
+                .get()
+                .await()
+
+            val users = snapshot.documents.mapNotNull { doc ->
+                doc.toObject(User::class.java)
+            }
+            Result.success(users)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
 }
