@@ -45,6 +45,34 @@ class UserRepository {
         }
     }
 
+    // Update user's username
+    suspend fun updateUsername(uid: String, newUsername: String): Result<Unit> {
+        return try {
+            val newUsernameLower = newUsername.lowercase()
+            val existing = usersCollection.whereEqualTo("usernameLower", newUsernameLower).get().await()
+            if (!existing.isEmpty) {
+                return Result.failure(Exception("El nombre de usuario ya está en uso"))
+            }
+            usersCollection.document(uid).update(
+                "username", newUsername,
+                "usernameLower", newUsernameLower
+            ).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // Update user's weight unit
+    suspend fun updateWeightUnit(uid: String, unit: String): Result<Unit> {
+        return try {
+            usersCollection.document(uid).update("weightUnit", unit).await()
+            Result.success(Unit)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     // Gets the list of user IDs that the given user follows
     suspend fun getFollowingIds(uid: String): Result<List<String>> {
         return try {

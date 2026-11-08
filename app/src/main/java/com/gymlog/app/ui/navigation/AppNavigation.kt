@@ -16,6 +16,7 @@ import com.gymlog.app.ui.main.MainScreen
 import com.gymlog.app.ui.profile.UserProfileScreen
 import com.gymlog.app.ui.profile.UserProfileViewModel
 import com.gymlog.app.ui.profile.UserProfileViewModelFactory
+import com.gymlog.app.ui.settings.SettingsScreen
 import com.gymlog.app.ui.workout.CreateWorkoutScreen
 import com.gymlog.app.ui.workout.CreateWorkoutViewModel
 import com.gymlog.app.ui.workout.WorkoutDetailScreen
@@ -124,6 +125,17 @@ fun AppNavigation(
                     navController.navigate(Routes.workoutDetail(workoutId))
                 },
                 viewModel = viewModel
+            )
+        }
+
+        composable(Routes.SETTINGS) {
+            SettingsScreen(
+                onBack = { navController.popBackStack() },
+                onLogout = {
+                    navController.navigate(Routes.LOGIN) {
+                        popUpTo(0) { inclusive = true }
+                    }
+                }
             )
         }
     }

@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
@@ -27,15 +28,16 @@ import com.gymlog.app.data.model.User
 import com.gymlog.app.ui.common.WorkoutCard
 import com.gymlog.app.util.WeightFormatter
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ProfileScreen(
     onWorkoutClick: (String) -> Unit,
+    onSettingsClick: () -> Unit,
     reloadKey: Boolean = false,
     viewModel: ProfileViewModel = viewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
 
-    // Reload profile data only when a workout was deleted/edited
     LaunchedEffect(reloadKey) {
         if (reloadKey) {
             viewModel.loadProfile()
@@ -46,91 +48,119 @@ fun ProfileScreen(
     val totalVolume = state.workouts.sumOf { it.totalVolume }
     val totalSets = state.workouts.sumOf { it.totalSets }
 
-    if (state.isLoading) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            CircularProgressIndicator()
+    Scaffold(
+        containerColor = MaterialTheme.colorScheme.background,
+        contentWindowInsets = WindowInsets(0),
+        topBar = {
+            TopAppBar(
+                windowInsets = WindowInsets(0),
+                title = {},
+                colors = TopAppBarDefaults.topAppBarColors(
+                    containerColor = MaterialTheme.colorScheme.background
+                ),
+                actions = {
+                    IconButton(onClick = onSettingsClick) {
+                        Icon(
+                            imageVector = Icons.Default.Settings,
+                            contentDescription = "Ajustes",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+            )
         }
-    } else if (state.error != null) {
-        Box(
-            modifier = Modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            Text(text = state.error ?: "Unknown error", color = MaterialTheme.colorScheme.error)
-        }
-    } else if (state.user != null) {
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(horizontal = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp)
-        ) {
-            item {
-                ProfileHeader(user = state.user!!)
+    ) { paddingValues ->
+        if (state.isLoading) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
             }
-
-            item {
-                ProfileStats(
-                    workoutsCount = state.workouts.size,
-                    followersCount = state.user!!.followersCount,
-                    followingCount = state.user!!.followingCount
-                )
+        } else if (state.error != null) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(text = state.error ?: "Unknown error", color = MaterialTheme.colorScheme.error)
             }
+        } else if (state.user != null) {
+            LazyColumn(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(16.dp),
+                contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp)
+            ) {
+                item {
+                    ProfileHeader(user = state.user!!)
+                }
 
-            item {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    StatCard(
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Default.Timer,
-                        label = "Horas",
-                        value = if (totalHours < 1) "${(totalHours * 60).toInt()} min" else "${"%.1f".format(totalHours)} h"
-                    )
-                    StatCard(
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Default.FitnessCenter,
-                        label = "Volumen",
-                        value = WeightFormatter.format(totalVolume, state.user!!.weightUnit)
-                    )
-                    StatCard(
-                        modifier = Modifier.weight(1f),
-                        icon = Icons.Default.List,
-                        label = "Series",
-                        value = "$totalSets"
+                item {
+                    ProfileStats(
+                        workoutsCount = state.workouts.size,
+                        followersCount = state.user!!.followersCount,
+                        followingCount = state.user!!.followingCount
                     )
                 }
-            }
 
-            item {
-                Text(
-                    text = "Historial de entrenos",
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold
-                )
-            }
+                item {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        StatCard(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Default.Timer,
+                            label = "Horas",
+                            value = if (totalHours < 1) "${(totalHours * 60).toInt()} min" else "${"%.1f".format(totalHours)} h"
+                        )
+                        StatCard(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Default.FitnessCenter,
+                            label = "Volumen",
+                            value = WeightFormatter.format(totalVolume, state.user!!.weightUnit)
+                        )
+                        StatCard(
+                            modifier = Modifier.weight(1f),
+                            icon = Icons.Default.List,
+                            label = "Series",
+                            value = "$totalSets"
+                        )
+                    }
+                }
 
-            if (state.workouts.isEmpty()) {
                 item {
                     Text(
-                        text = "Todavía no has registrado ningún entreno",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp)
+                        text = "Historial de entrenos",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
                     )
                 }
-            } else {
-                items(state.workouts) { workout ->
-                    WorkoutCard(
-                        workout = workout,
-                        weightUnit = state.user!!.weightUnit,
-                        onClick = { onWorkoutClick(workout.id) }
-                    )
+
+                if (state.workouts.isEmpty()) {
+                    item {
+                        Text(
+                            text = "Todavía no has registrado ningún entreno",
+                            style = MaterialTheme.typography.bodyMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            textAlign = TextAlign.Center,
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp)
+                        )
+                    }
+                } else {
+                    items(state.workouts) { workout ->
+                        WorkoutCard(
+                            workout = workout,
+                            weightUnit = state.user!!.weightUnit,
+                            onClick = { onWorkoutClick(workout.id) }
+                        )
+                    }
                 }
             }
         }

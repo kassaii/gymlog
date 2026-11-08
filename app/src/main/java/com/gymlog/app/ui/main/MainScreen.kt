@@ -39,7 +39,6 @@ fun MainScreen(
 ) {
     var currentTab by rememberSaveable { mutableStateOf("home") }
 
-    // Internal NavController for the feed tabs
     val feedNavController = rememberNavController()
 
     val workoutState by createWorkoutViewModel.state.collectAsStateWithLifecycle()
@@ -135,6 +134,9 @@ fun MainScreen(
                 "profile" -> ProfileScreen(
                     onWorkoutClick = { workoutId ->
                         navController.navigate(Routes.workoutDetail(workoutId))
+                    },
+                    onSettingsClick = {
+                        navController.navigate(Routes.SETTINGS)
                     },
                     reloadKey = reloadFeed
                 )

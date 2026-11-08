@@ -1,6 +1,7 @@
 package com.gymlog.app.data.repository
 
 import com.gymlog.app.data.model.User
+import com.google.firebase.auth.EmailAuthProvider
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.gymlog.app.util.Constants
@@ -63,6 +64,24 @@ class AuthRepository {
                 ?: return Result.failure(Exception("Perfil de usuario no encontrado"))
 
             Result.success(user)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
+    // Re-authenticates the user and then updates the password
+    suspend fun updatePasswordWithReauth(currentPassword: String, newPassword: String): Result<Unit> {
+        return try {
+            val user = auth.currentUser ?: return Result.failure(Exception("No hay usuario logueado"))
+            val email = user.email ?: return Result.failure(Exception("El usuario no tiene email"))
+
+            val credential = EmailAuthProvider.getCredential(email, currentPassword)
+
+            user.reauthenticate(credential).await()
+
+            user.updatePassword(newPassword).await()
+
+            Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }
