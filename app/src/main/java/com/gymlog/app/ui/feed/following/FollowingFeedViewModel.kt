@@ -20,6 +20,7 @@ import kotlin.time.Duration.Companion.milliseconds
 data class FollowingFeedUiState(
     val workouts: List<Workout> = emptyList(),
     val searchedUsers: List<User> = emptyList(),
+    val myFollowingIds: Set<String> = emptySet(),
     val isLoading: Boolean = true,
     val isRefreshing: Boolean = false,
     val isSearchingUsers: Boolean = false,
@@ -64,6 +65,7 @@ class FollowingFeedViewModel : ViewModel() {
             currentUserId?.let { uid ->
                 userRepository.getFollowingIds(uid).onSuccess { ids ->
                     myFollowingIds = ids.toSet()
+                    _state.update { it.copy(myFollowingIds = myFollowingIds) }
                 }
             }
         }
@@ -169,6 +171,23 @@ class FollowingFeedViewModel : ViewModel() {
                     _state.update { it.copy(error = e.message, isSearchingUsers = false) }
                 }
             )
+        }
+    }
+
+    fun refreshSearchResults() {
+        val query = _state.value.searchQuery
+        if (query.isNotBlank()) {
+            onSearchQueryChange(query)
+        }
+    }
+
+    fun refreshFollowingIds() {
+        viewModelScope.launch {
+            val uid = authRepository.getCurrentUserId() ?: return@launch
+            userRepository.getFollowingIds(uid).onSuccess { ids ->
+                myFollowingIds = ids.toSet()
+                _state.update { it.copy(myFollowingIds = myFollowingIds) }
+            }
         }
     }
 }
