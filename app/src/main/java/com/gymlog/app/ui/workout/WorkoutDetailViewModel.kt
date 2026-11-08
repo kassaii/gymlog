@@ -9,6 +9,7 @@ import com.gymlog.app.data.repository.WorkoutRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -31,16 +32,20 @@ class WorkoutDetailViewModel : ViewModel() {
     private val _state = MutableStateFlow(WorkoutDetailUiState())
     val state: StateFlow<WorkoutDetailUiState> = _state.asStateFlow()
 
+    private fun observeWeightUnit() {
+        viewModelScope.launch {
+            val uid = authRepository.getCurrentUserId() ?: return@launch
+            userRepository.observeWeightUnit(uid).collectLatest { unit ->
+                _state.update { it.copy(weightUnit = unit) }
+            }
+        }
+    }
+
     fun loadWorkout(workoutId: String) {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
 
-            val uid = authRepository.getCurrentUserId()
-            if (uid != null) {
-                userRepository.getUserProfile(uid).onSuccess { user ->
-                    _state.update { it.copy(weightUnit = user.weightUnit) }
-                }
-            }
+            observeWeightUnit()
 
             val result = workoutRepository.getWorkoutById(workoutId)
 

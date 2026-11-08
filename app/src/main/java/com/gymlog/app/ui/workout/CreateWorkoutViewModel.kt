@@ -13,6 +13,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
@@ -56,14 +57,14 @@ class CreateWorkoutViewModel : ViewModel() {
     init {
         loadExercises()
         loadPreviousSets()
-        loadUserWeightUnit()
+        observeWeightUnit()
     }
 
-    private fun loadUserWeightUnit() {
+    private fun observeWeightUnit() {
         viewModelScope.launch {
             val uid = authRepository.getCurrentUserId() ?: return@launch
-            userRepository.getUserProfile(uid).onSuccess { user ->
-                _state.update { it.copy(weightUnit = user.weightUnit) }
+            userRepository.observeWeightUnit(uid).collectLatest { unit ->
+                _state.update { it.copy(weightUnit = unit) }
             }
         }
     }
@@ -87,7 +88,6 @@ class CreateWorkoutViewModel : ViewModel() {
             loadExercises()
         }
         loadPreviousSets()
-        loadUserWeightUnit()
     }
 
     private fun loadPreviousSets() {

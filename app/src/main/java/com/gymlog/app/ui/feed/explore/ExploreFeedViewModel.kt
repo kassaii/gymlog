@@ -12,6 +12,7 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
@@ -20,6 +21,7 @@ data class ExploreFeedUiState(
     val workouts: List<Workout> = emptyList(),
     val searchedUsers: List<User> = emptyList(),
     val isLoading: Boolean = true,
+    val isRefreshing: Boolean = false,
     val isSearchingUsers: Boolean = false,
     val error: String? = null,
     val isSearchActive: Boolean = false,
@@ -44,15 +46,22 @@ class ExploreFeedViewModel : ViewModel() {
     init {
         loadFeed()
         loadUserContext()
+        observeWeightUnit()
+    }
+
+    private fun observeWeightUnit() {
+        viewModelScope.launch {
+            val uid = authRepository.getCurrentUserId() ?: return@launch
+            userRepository.observeWeightUnit(uid).collectLatest { unit ->
+                _state.update { it.copy(weightUnit = unit) }
+            }
+        }
     }
 
     private fun loadUserContext() {
         viewModelScope.launch {
             currentUserId = authRepository.getCurrentUserId()
             currentUserId?.let { uid ->
-                userRepository.getUserProfile(uid).onSuccess { user ->
-                    _state.update { it.copy(weightUnit = user.weightUnit) }
-                }
                 userRepository.getFollowingIds(uid).onSuccess { ids ->
                     myFollowingIds = ids.toSet()
                 }
@@ -69,6 +78,20 @@ class ExploreFeedViewModel : ViewModel() {
                 },
                 onFailure = { e ->
                     _state.update { it.copy(isLoading = false, error = e.message) }
+                }
+            )
+        }
+    }
+
+    fun onRefresh() {
+        viewModelScope.launch {
+            _state.update { it.copy(isRefreshing = true) }
+            workoutRepository.getRecentWorkouts().fold(
+                onSuccess = { workouts ->
+                    _state.update { it.copy(workouts = workouts, isRefreshing = false) }
+                },
+                onFailure = { e ->
+                    _state.update { it.copy(isRefreshing = false, error = e.message) }
                 }
             )
         }
@@ -119,6 +142,13 @@ class ExploreFeedViewModel : ViewModel() {
                     _state.update { it.copy(error = e.message, isSearchingUsers = false) }
                 }
             )
+        }
+    }
+
+    fun refreshSearchResults() {
+        val query = _state.value.searchQuery
+        if (query.isNotBlank()) {
+            onSearchQueryChange(query)
         }
     }
 }

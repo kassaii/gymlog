@@ -10,6 +10,7 @@ import com.gymlog.app.data.repository.WorkoutRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -30,10 +31,10 @@ class ProfileViewModel : ViewModel() {
     val state: StateFlow<ProfileUiState> = _state.asStateFlow()
 
     init {
-        loadProfile()
+        observeProfile()
     }
 
-    fun loadProfile() {
+    private fun observeProfile() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
 
@@ -43,31 +44,28 @@ class ProfileViewModel : ViewModel() {
                 return@launch
             }
 
-            // Load user profile
-            val userResult = userRepository.getUserProfile(uid)
-            if (userResult.isFailure) {
-                _state.update { it.copy(isLoading = false, error = userResult.exceptionOrNull()?.message) }
-                return@launch
-            }
-
-            // Load user workouts
-            val workoutsResult = workoutRepository.getWorkoutsByUserId(uid)
-            if (workoutsResult.isFailure) {
-                _state.update { it.copy(isLoading = false, error = workoutsResult.exceptionOrNull()?.message) }
-                return@launch
-            }
-
-            _state.update {
-                it.copy(
-                    user = userResult.getOrNull(),
-                    workouts = workoutsResult.getOrDefault(emptyList()),
-                    isLoading = false
-                )
+            // Observe workouts in real time
+            workoutRepository.observeWorkoutsByUserId(uid).collectLatest { workouts ->
+                _state.update { it.copy(workouts = workouts) }
             }
         }
-    }
 
-    fun refresh() {
-        loadProfile()
+        viewModelScope.launch {
+            val uid = authRepository.getCurrentUserId() ?: return@launch
+
+            // Observe user profile in real time
+            userRepository.observeUserProfile(uid).collectLatest { user ->
+                if (user != null) {
+                    _state.update {
+                        it.copy(
+                            user = user,
+                            isLoading = false
+                        )
+                    }
+                } else {
+                    _state.update { it.copy(isLoading = false, error = "Perfil no encontrado") }
+                }
+            }
+        }
     }
 }

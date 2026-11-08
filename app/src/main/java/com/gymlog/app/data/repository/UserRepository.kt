@@ -2,6 +2,9 @@ package com.gymlog.app.data.repository
 
 import com.gymlog.app.data.model.User
 import com.google.firebase.firestore.FirebaseFirestore
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
 // Repository responsible for user data
@@ -20,6 +23,39 @@ class UserRepository {
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    // Observes a user's profile in real time
+    fun observeUserProfile(uid: String): Flow<User?> = callbackFlow {
+        val listener = usersCollection.document(uid)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                if (snapshot != null && snapshot.exists()) {
+                    trySend(snapshot.toObject(User::class.java))
+                } else {
+                    trySend(null)
+                }
+            }
+        awaitClose { listener.remove() }
+    }
+
+    // Observes the user's weight unit in real time
+    fun observeWeightUnit(uid: String): Flow<String> = callbackFlow {
+        val listener = usersCollection.document(uid)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                if (snapshot != null && snapshot.exists()) {
+                    val unit = snapshot.getString("weightUnit") ?: "kg"
+                    trySend(unit)
+                }
+            }
+        awaitClose { listener.remove() }
     }
 
     // Searches for users by username prefix

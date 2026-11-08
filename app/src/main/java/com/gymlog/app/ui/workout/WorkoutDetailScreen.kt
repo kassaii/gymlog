@@ -46,7 +46,7 @@ import com.gymlog.app.util.WeightFormatter
 @Composable
 fun WorkoutDetailScreen(
     workoutId: String,
-    onBack: (Boolean) -> Unit,
+    onBack: () -> Unit,
     viewModel: WorkoutDetailViewModel = viewModel(key = workoutId)
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -58,7 +58,7 @@ fun WorkoutDetailScreen(
 
     LaunchedEffect(state.deleteSuccess) {
         if (state.deleteSuccess) {
-            onBack(true)
+            onBack()
             viewModel.onDeleteHandled()
         }
     }
@@ -77,7 +77,7 @@ fun WorkoutDetailScreen(
                     containerColor = MaterialTheme.colorScheme.background
                 ),
                 navigationIcon = {
-                    IconButton(onClick = { onBack(false) }) {
+                    IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = "Volver"

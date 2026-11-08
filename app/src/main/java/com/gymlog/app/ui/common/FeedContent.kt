@@ -8,6 +8,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.ErrorOutline
 import androidx.compose.material.icons.outlined.FitnessCenter
 import androidx.compose.material3.*
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -17,49 +18,58 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.gymlog.app.data.model.Workout
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FeedContent(
     workouts: List<Workout>,
     isLoading: Boolean,
     error: String?,
     weightUnit: String,
+    isRefreshing: Boolean,
+    onRefresh: () -> Unit,
     onWorkoutClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    when {
-        isLoading -> Box(
-            modifier = modifier.fillMaxSize(),
-            contentAlignment = Alignment.Center
-        ) {
-            CircularProgressIndicator()
-        }
+    PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = onRefresh,
+        modifier = modifier.fillMaxSize()
+    ) {
+        when {
+            isLoading -> Box(
+                modifier = Modifier.fillMaxSize(),
+                contentAlignment = Alignment.Center
+            ) {
+                CircularProgressIndicator()
+            }
 
-        error != null -> FeedMessage(
-            icon = Icons.Outlined.ErrorOutline,
-            title = "Algo ha salido mal",
-            subtitle = error,
-            isError = true,
-            modifier = modifier
-        )
+            error != null -> FeedMessage(
+                icon = Icons.Outlined.ErrorOutline,
+                title = "Algo ha salido mal",
+                subtitle = error,
+                isError = true,
+                modifier = Modifier.fillMaxSize()
+            )
 
-        workouts.isEmpty() -> FeedMessage(
-            icon = Icons.Outlined.FitnessCenter,
-            title = "Aún no hay entrenamientos",
-            subtitle = "Cuando alguien termine una sesión, aparecerá aquí.",
-            modifier = modifier
-        )
+            workouts.isEmpty() -> FeedMessage(
+                icon = Icons.Outlined.FitnessCenter,
+                title = "Aún no hay entrenamientos",
+                subtitle = "Cuando alguien termine una sesión, aparecerá aquí.",
+                modifier = Modifier.fillMaxSize()
+            )
 
-        else -> LazyColumn(
-            modifier = modifier.fillMaxSize(),
-            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
-            verticalArrangement = Arrangement.spacedBy(14.dp)
-        ) {
-            items(workouts, key = { it.id }) { workout ->
-                WorkoutCard(
-                    workout = workout,
-                    weightUnit = weightUnit,
-                    onClick = { onWorkoutClick(workout.id) }
-                )
+            else -> LazyColumn(
+                modifier = Modifier.fillMaxSize(),
+                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 24.dp),
+                verticalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                items(workouts, key = { it.id }) { workout ->
+                    WorkoutCard(
+                        workout = workout,
+                        weightUnit = weightUnit,
+                        onClick = { onWorkoutClick(workout.id) }
+                    )
+                }
             }
         }
     }
@@ -75,7 +85,6 @@ private fun FeedMessage(
 ) {
     Column(
         modifier = modifier
-            .fillMaxSize()
             .padding(horizontal = 40.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center

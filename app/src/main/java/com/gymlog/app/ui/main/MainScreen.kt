@@ -34,8 +34,7 @@ import com.gymlog.app.ui.workout.CreateWorkoutViewModel
 @Composable
 fun MainScreen(
     navController: NavHostController,
-    createWorkoutViewModel: CreateWorkoutViewModel,
-    reloadFeed: Boolean = false
+    createWorkoutViewModel: CreateWorkoutViewModel
 ) {
     var currentTab by rememberSaveable { mutableStateOf("home") }
 
@@ -110,8 +109,7 @@ fun MainScreen(
                                 },
                                 onSwitchToFollowing = {
                                     feedNavController.navigate("following")
-                                },
-                                reloadKey = reloadFeed
+                                }
                             )
                         }
                         composable("following") {
@@ -137,8 +135,7 @@ fun MainScreen(
                     },
                     onSettingsClick = {
                         navController.navigate(Routes.SETTINGS)
-                    },
-                    reloadKey = reloadFeed
+                    }
                 )
             }
         }

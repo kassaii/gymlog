@@ -1,9 +1,6 @@
 package com.gymlog.app.ui.navigation
 
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -57,21 +54,10 @@ fun AppNavigation(
             )
         }
 
-        composable(Routes.MAIN) { backStackEntry ->
-            val workoutChanged by backStackEntry.savedStateHandle
-                .getStateFlow("workout_changed", false)
-                .collectAsStateWithLifecycle()
-
-            LaunchedEffect(workoutChanged) {
-                if (workoutChanged) {
-                    backStackEntry.savedStateHandle["workout_changed"] = false
-                }
-            }
-
+        composable(Routes.MAIN) {
             MainScreen(
                 navController = navController,
-                createWorkoutViewModel = createWorkoutViewModel,
-                reloadFeed = workoutChanged
+                createWorkoutViewModel = createWorkoutViewModel
             )
         }
 
@@ -98,14 +84,7 @@ fun AppNavigation(
             val workoutId = backStackEntry.arguments?.getString(Routes.WORKOUT_ID) ?: ""
             WorkoutDetailScreen(
                 workoutId = workoutId,
-                onBack = { hasChanges ->
-                    if (hasChanges) {
-                        navController.previousBackStackEntry
-                            ?.savedStateHandle
-                            ?.set("workout_changed", true)
-                    }
-                    navController.popBackStack()
-                }
+                onBack = { navController.popBackStack() }
             )
         }
 

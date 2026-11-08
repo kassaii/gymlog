@@ -133,6 +133,8 @@ fun FollowingFeedScreen(
                 isLoading = state.isLoading,
                 error = state.error,
                 weightUnit = state.weightUnit,
+                isRefreshing = state.isRefreshing,
+                onRefresh = viewModel::onRefresh,
                 onWorkoutClick = onWorkoutClick,
                 modifier = Modifier.padding(paddingValues)
             )

@@ -12,7 +12,6 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,16 +32,9 @@ import com.gymlog.app.util.WeightFormatter
 fun ProfileScreen(
     onWorkoutClick: (String) -> Unit,
     onSettingsClick: () -> Unit,
-    reloadKey: Boolean = false,
     viewModel: ProfileViewModel = viewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
-
-    LaunchedEffect(reloadKey) {
-        if (reloadKey) {
-            viewModel.loadProfile()
-        }
-    }
 
     val totalHours = state.workouts.sumOf { it.durationMinutes } / 60.0
     val totalVolume = state.workouts.sumOf { it.totalVolume }

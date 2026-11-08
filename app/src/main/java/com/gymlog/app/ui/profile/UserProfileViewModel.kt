@@ -11,6 +11,7 @@ import com.gymlog.app.data.repository.WorkoutRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -36,41 +37,40 @@ class UserProfileViewModel(
     val state: StateFlow<UserProfileUiState> = _state.asStateFlow()
 
     init {
-        loadProfile()
+        observeProfile()
     }
 
-    private fun loadProfile() {
+    private fun observeProfile() {
         viewModelScope.launch {
-            fetchProfileData()
-        }
-    }
+            _state.update { it.copy(isLoading = true, error = null) }
 
-    private suspend fun fetchProfileData() {
-        _state.update { it.copy(isLoading = true, error = null) }
+            val currentUid = authRepository.getCurrentUserId() ?: return@launch
 
-        val currentUid = authRepository.getCurrentUserId() ?: return
+            // Load workouts once
+            val workoutsResult = workoutRepository.getWorkoutsByUserId(targetUid)
 
-        val userResult = userRepository.getUserProfile(targetUid)
-        if (userResult.isFailure) {
-            _state.update { it.copy(isLoading = false, error = userResult.exceptionOrNull()?.message) }
-            return
-        }
+            // Observe target profile
+            userRepository.observeUserProfile(targetUid).collectLatest { user ->
+                // Observe current user to know if following
+                userRepository.observeUserProfile(currentUid).collectLatest { currentUser ->
+                    val isFollowing = currentUser?.followingIds?.contains(targetUid) ?: false
+                    val isOwnProfile = currentUid == targetUid
 
-        val workoutsResult = workoutRepository.getWorkoutsByUserId(targetUid)
-
-        val currentUserResult = userRepository.getUserProfile(currentUid)
-        val isFollowing = currentUserResult.getOrNull()?.followingIds?.contains(targetUid) ?: false
-
-        val isOwnProfile = currentUid == targetUid
-
-        _state.update {
-            it.copy(
-                user = userResult.getOrNull(),
-                workouts = workoutsResult.getOrDefault(emptyList()),
-                isFollowing = isFollowing,
-                isOwnProfile = isOwnProfile,
-                isLoading = false
-            )
+                    if (user != null) {
+                        _state.update {
+                            it.copy(
+                                user = user,
+                                workouts = workoutsResult.getOrDefault(it.workouts),
+                                isFollowing = isFollowing,
+                                isOwnProfile = isOwnProfile,
+                                isLoading = false
+                            )
+                        }
+                    } else {
+                        _state.update { it.copy(isLoading = false, error = "Perfil no encontrado") }
+                    }
+                }
+            }
         }
     }
 
@@ -87,7 +87,6 @@ class UserProfileViewModel(
             }
 
             result.onSuccess {
-                fetchProfileData()
                 _state.update { it.copy(isFollowLoading = false) }
             }.onFailure { e ->
                 _state.update { it.copy(isFollowLoading = false, error = e.message) }

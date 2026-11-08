@@ -21,6 +21,7 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
@@ -33,11 +34,15 @@ fun ExploreFeedScreen(
     onWorkoutClick: (String) -> Unit,
     onUserClick: (String) -> Unit,
     onSwitchToFollowing: () -> Unit,
-    reloadKey: Boolean = false,
     viewModel: ExploreFeedViewModel = viewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
+
+    LifecycleResumeEffect(Unit) {
+        viewModel.refreshSearchResults()
+        onPauseOrDispose { }
+    }
 
     BackHandler(enabled = state.isSearchActive) {
         viewModel.onSearchToggle()
@@ -121,6 +126,8 @@ fun ExploreFeedScreen(
                 isLoading = state.isLoading,
                 error = state.error,
                 weightUnit = state.weightUnit,
+                isRefreshing = state.isRefreshing,
+                onRefresh = viewModel::onRefresh,
                 onWorkoutClick = onWorkoutClick,
                 modifier = Modifier.padding(paddingValues)
             )

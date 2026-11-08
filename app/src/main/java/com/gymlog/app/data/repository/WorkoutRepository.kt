@@ -6,6 +6,9 @@ import com.gymlog.app.data.model.Exercise
 import com.gymlog.app.data.model.ExerciseSet
 import com.gymlog.app.data.model.Workout
 import com.gymlog.app.data.model.WorkoutExercise
+import kotlinx.coroutines.channels.awaitClose
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
 class WorkoutRepository {
@@ -185,6 +188,26 @@ class WorkoutRepository {
         } catch (e: Exception) {
             Result.failure(e)
         }
+    }
+
+    // Observes all workouts of a specific user in real time, ordered by date descending
+    fun observeWorkoutsByUserId(userId: String): Flow<List<Workout>> = callbackFlow {
+        val listener = workoutsCollection
+            .whereEqualTo("userId", userId)
+            .orderBy("date", Query.Direction.DESCENDING)
+            .addSnapshotListener { snapshot, error ->
+                if (error != null) {
+                    close(error)
+                    return@addSnapshotListener
+                }
+                if (snapshot != null) {
+                    val workouts = snapshot.documents.mapNotNull { doc ->
+                        doc.toObject(Workout::class.java)?.copy(id = doc.id)
+                    }
+                    trySend(workouts)
+                }
+            }
+        awaitClose { listener.remove() }
     }
 
     // Gets a workout by id
