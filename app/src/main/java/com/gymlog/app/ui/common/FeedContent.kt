@@ -22,6 +22,7 @@ fun FeedContent(
     workouts: List<Workout>,
     isLoading: Boolean,
     error: String?,
+    weightUnit: String,
     onWorkoutClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -56,7 +57,7 @@ fun FeedContent(
             items(workouts, key = { it.id }) { workout ->
                 WorkoutCard(
                     workout = workout,
-                    weightUnit = "kg",
+                    weightUnit = weightUnit,
                     onClick = { onWorkoutClick(workout.id) }
                 )
             }

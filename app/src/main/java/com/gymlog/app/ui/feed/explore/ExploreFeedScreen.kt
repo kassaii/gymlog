@@ -120,6 +120,7 @@ fun ExploreFeedScreen(
                 workouts = state.workouts,
                 isLoading = state.isLoading,
                 error = state.error,
+                weightUnit = state.weightUnit,
                 onWorkoutClick = onWorkoutClick,
                 modifier = Modifier.padding(paddingValues)
             )

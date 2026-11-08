@@ -145,7 +145,7 @@ fun UserProfileScreen(
                             modifier = Modifier.weight(1f),
                             icon = Icons.Default.FitnessCenter,
                             label = "Volumen",
-                            value = WeightFormatter.format(totalVolume, user.weightUnit)
+                            value = WeightFormatter.formatCompact(totalVolume, state.user!!.weightUnit)
                         )
                         StatCard(
                             modifier = Modifier.weight(1f),

@@ -29,6 +29,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.gymlog.app.util.TimeFormatter
+import com.gymlog.app.util.WeightFormatter
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -240,7 +241,7 @@ fun CreateWorkoutScreen(
                         modifier = Modifier.weight(1f),
                         icon = Icons.Default.FitnessCenter,
                         label = "Volumen",
-                        value = "${totalVolume.toInt()} kg",
+                        value = WeightFormatter.formatCompact(totalVolume, state.weightUnit),
                         iconTint = MaterialTheme.colorScheme.primary
                     )
                     StatCard(
@@ -273,6 +274,7 @@ fun CreateWorkoutScreen(
 
                 WorkoutExerciseCard(
                     exercise = exercise,
+                    weightUnit = state.weightUnit,
                     isFirst = index == 0,
                     isLast = index == state.exercises.size - 1,
                     expandedSetIndex = expandedSetIndex,

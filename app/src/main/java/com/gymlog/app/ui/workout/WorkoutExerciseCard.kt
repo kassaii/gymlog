@@ -46,6 +46,7 @@ import com.gymlog.app.data.model.ExerciseSet
 import com.gymlog.app.data.model.WorkoutExercise
 import com.gymlog.app.ui.theme.LocalWorkoutColors
 import com.gymlog.app.util.NumberFormatter
+import com.gymlog.app.util.WeightFormatter
 
 private val SetBoxSize = 40.dp
 private val ColumnGap = 6.dp
@@ -59,6 +60,7 @@ private data class SetRowInfo(
 @Composable
 fun WorkoutExerciseCard(
     exercise: WorkoutExercise,
+    weightUnit: String,
     isFirst: Boolean,
     isLast: Boolean,
     expandedSetIndex: Int?,
@@ -168,6 +170,7 @@ fun WorkoutExerciseCard(
                     label = info.label,
                     set = set,
                     previous = info.previous,
+                    weightUnit = weightUnit,
                     isExpanded = expandedSetIndex == setIndex,
                     workoutColors = workoutColors,
                     onExpand = { onToggleSetExpansion(setIndex) },
@@ -292,6 +295,7 @@ private fun SetRow(
     label: String,
     set: ExerciseSet,
     previous: ExerciseSet?,
+    weightUnit: String,
     isExpanded: Boolean,
     workoutColors: com.gymlog.app.ui.theme.WorkoutColors,
     onExpand: () -> Unit,
@@ -302,6 +306,7 @@ private fun SetRow(
 ) {
     val displayWeight = if (set.weight > 0.0) set.weight else (previous?.weight ?: 0.0)
     val displayReps = if (set.reps > 0) set.reps else (previous?.reps ?: 0)
+    val displayWeightInUnit = if (weightUnit == "kg") displayWeight else WeightFormatter.kgToLb(displayWeight)
 
     val summaryColor = if (set.isWarmup) {
         workoutColors.warmup
@@ -388,7 +393,7 @@ private fun SetRow(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = NumberFormatter.toDisplay(displayWeight),
+                    text = NumberFormatter.toDisplay(displayWeightInUnit),
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     color = summaryColor
@@ -415,17 +420,17 @@ private fun SetRow(
                 modifier = Modifier.weight(1.2f),
                 contentAlignment = Alignment.Center
             ) {
-                val weightDiff = if (previous != null && !set.isWarmup) displayWeight - previous.weight else 0.0
+                val weightDiffKg = if (previous != null && !set.isWarmup) displayWeight - previous.weight else 0.0
                 val repsDiff = if (previous != null && !set.isWarmup) displayReps - previous.reps else 0
 
                 val progressText = when {
                     set.isWarmup -> "-"
 
-                    weightDiff < -0.001 && repsDiff > 0 ->
-                        "${NumberFormatter.toDisplay(weightDiff)} / +$repsDiff"
+                    weightDiffKg < -0.001 && repsDiff > 0 ->
+                        "${WeightFormatter.formatDiff(weightDiffKg, weightUnit)} / +$repsDiff"
 
-                    weightDiff > 0.001 -> "▲ +${NumberFormatter.toDisplay(weightDiff)} kg"
-                    weightDiff < -0.001 -> "▼ ${NumberFormatter.toDisplay(weightDiff)} kg"
+                    weightDiffKg > 0.001 -> "▲ +${WeightFormatter.formatDiff(weightDiffKg, weightUnit)} $weightUnit"
+                    weightDiffKg < -0.001 -> "▼ ${WeightFormatter.formatDiff(weightDiffKg, weightUnit)} $weightUnit"
                     repsDiff > 0 -> if (repsDiff == 1) "▲ +1 rep" else "▲ +$repsDiff reps"
                     repsDiff < 0 -> {
                         val absReps = kotlin.math.abs(repsDiff)
@@ -436,22 +441,22 @@ private fun SetRow(
 
                 val progressTextColor = when {
                     set.isWarmup -> workoutColors.warmup.copy(alpha = 0.7f)
-                    weightDiff > 0.001 -> workoutColors.up
-                    weightDiff == 0.0 && repsDiff > 0 -> workoutColors.up
-                    weightDiff < -0.001 && repsDiff > 0 -> MaterialTheme.colorScheme.onSurfaceVariant
-                    weightDiff < -0.001 -> workoutColors.down
-                    weightDiff == 0.0 && repsDiff < 0 -> workoutColors.down
+                    weightDiffKg > 0.001 -> workoutColors.up
+                    weightDiffKg == 0.0 && repsDiff > 0 -> workoutColors.up
+                    weightDiffKg < -0.001 && repsDiff > 0 -> MaterialTheme.colorScheme.onSurfaceVariant
+                    weightDiffKg < -0.001 -> workoutColors.down
+                    weightDiffKg == 0.0 && repsDiff < 0 -> workoutColors.down
                     else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                 }
 
                 val progressBackground = when {
                     set.isWarmup -> workoutColors.warmup.copy(alpha = 0.15f)
-                    set.isCompleted && (weightDiff > 0.001 || repsDiff > 0) -> MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
-                    weightDiff > 0.001 -> workoutColors.upBackground
-                    weightDiff == 0.0 && repsDiff > 0 -> workoutColors.upBackground
-                    weightDiff < -0.001 && repsDiff > 0 -> MaterialTheme.colorScheme.surfaceVariant
-                    weightDiff < -0.001 -> workoutColors.downBackground
-                    weightDiff == 0.0 && repsDiff < 0 -> workoutColors.downBackground
+                    set.isCompleted && (weightDiffKg > 0.001 || repsDiff > 0) -> MaterialTheme.colorScheme.surface.copy(alpha = 0.8f)
+                    weightDiffKg > 0.001 -> workoutColors.upBackground
+                    weightDiffKg == 0.0 && repsDiff > 0 -> workoutColors.upBackground
+                    weightDiffKg < -0.001 && repsDiff > 0 -> MaterialTheme.colorScheme.surfaceVariant
+                    weightDiffKg < -0.001 -> workoutColors.downBackground
+                    weightDiffKg == 0.0 && repsDiff < 0 -> workoutColors.downBackground
                     else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)
                 }
 
@@ -463,7 +468,7 @@ private fun SetRow(
                         .padding(horizontal = 4.dp, vertical = 4.dp),
                     contentAlignment = Alignment.Center
                 ) {
-                    val isMixedSignal = weightDiff < -0.001 && repsDiff > 0
+                    val isMixedSignal = weightDiffKg < -0.001 && repsDiff > 0
 
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -514,32 +519,34 @@ private fun SetRow(
                     .padding(12.dp)
             ) {
                 UnifiedStepInput(
-                    value = if (set.weight > 0) NumberFormatter.toInputText(set.weight) else "",
-                    hint = previous?.weight?.let { NumberFormatter.toInputText(it) } ?: "0",
+                    value = WeightFormatter.formatForInput(set.weight, weightUnit),
+                    hint = previous?.weight?.let { WeightFormatter.formatForInput(it, weightUnit) } ?: "0",
                     onValueChange = { v ->
-                        val parsed = v.toDoubleOrNull() ?: 0.0
+                        val parsedKg = WeightFormatter.parseFromInput(v, weightUnit)
                         val currentReps = if (set.reps > 0) set.reps else (previous?.reps ?: 0)
-                        onSetChange(currentReps, parsed)
+                        onSetChange(currentReps, parsedKg)
                     },
                     onMinusClick = {
-                        val baseWeight = if (set.weight > 0) set.weight else (previous?.weight ?: 0.0)
-                        val newWeight = (baseWeight - 2.5).coerceAtLeast(0.0)
+                        val baseWeightKg = if (set.weight > 0) set.weight else (previous?.weight ?: 0.0)
+                        val stepKg = if (weightUnit == "kg") 2.5 else WeightFormatter.lbToKg(5.0)
+                        val newWeightKg = (baseWeightKg - stepKg).coerceAtLeast(0.0)
                         val currentReps = if (set.reps > 0) set.reps else (previous?.reps ?: 0)
-                        onSetChange(currentReps, newWeight)
+                        onSetChange(currentReps, newWeightKg)
                     },
                     onPlusClick = {
-                        val baseWeight = if (set.weight > 0) set.weight else (previous?.weight ?: 0.0)
-                        val newWeight = baseWeight + 2.5
+                        val baseWeightKg = if (set.weight > 0) set.weight else (previous?.weight ?: 0.0)
+                        val stepKg = if (weightUnit == "kg") 2.5 else WeightFormatter.lbToKg(5.0)
+                        val newWeightKg = baseWeightKg + stepKg
                         val currentReps = if (set.reps > 0) set.reps else (previous?.reps ?: 0)
-                        onSetChange(currentReps, newWeight)
+                        onSetChange(currentReps, newWeightKg)
                     },
                     keyboardType = KeyboardType.Decimal,
-                    label = "KG",
+                    label = weightUnit.uppercase(),
                     workoutColors = workoutColors,
                     trailingContent = {
                         if (previous != null && !set.isWarmup) {
-                            val weightDiff = displayWeight - previous.weight
-                            if (weightDiff > 0.001) {
+                            val weightDiffKg = displayWeight - previous.weight
+                            if (weightDiffKg > 0.001) {
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(6.dp))
@@ -547,7 +554,7 @@ private fun SetRow(
                                         .padding(horizontal = 10.dp, vertical = 6.dp)
                                 ) {
                                     Text(
-                                        text = "▲+${NumberFormatter.toDisplay(weightDiff)}",
+                                        text = "▲+${WeightFormatter.formatDiff(weightDiffKg, weightUnit)}",
                                         style = MaterialTheme.typography.labelLarge,
                                         fontWeight = FontWeight.Bold,
                                         color = workoutColors.up,
@@ -555,7 +562,7 @@ private fun SetRow(
                                         softWrap = false
                                     )
                                 }
-                            } else if (weightDiff < -0.001) {
+                            } else if (weightDiffKg < -0.001) {
                                 Box(
                                     modifier = Modifier
                                         .clip(RoundedCornerShape(6.dp))
@@ -563,7 +570,7 @@ private fun SetRow(
                                         .padding(horizontal = 10.dp, vertical = 6.dp)
                                 ) {
                                     Text(
-                                        text = "▼${NumberFormatter.toDisplay(weightDiff)}",
+                                        text = "▼${WeightFormatter.formatDiff(weightDiffKg, weightUnit)}",
                                         style = MaterialTheme.typography.labelLarge,
                                         fontWeight = FontWeight.Bold,
                                         color = workoutColors.down,
@@ -583,27 +590,27 @@ private fun SetRow(
                     hint = previous?.reps?.toString() ?: "0",
                     onValueChange = { v ->
                         val parsed = v.toIntOrNull() ?: 0
-                        val currentWeight = if (set.weight > 0) set.weight else (previous?.weight ?: 0.0)
-                        onSetChange(parsed, currentWeight)
+                        val currentWeightKg = if (set.weight > 0) set.weight else (previous?.weight ?: 0.0)
+                        onSetChange(parsed, currentWeightKg)
                     },
                     onMinusClick = {
                         val baseReps = if (set.reps > 0) set.reps else (previous?.reps ?: 0)
                         val newReps = (baseReps - 1).coerceAtLeast(0)
-                        val currentWeight = if (set.weight > 0) set.weight else (previous?.weight ?: 0.0)
-                        onSetChange(newReps, currentWeight)
+                        val currentWeightKg = if (set.weight > 0) set.weight else (previous?.weight ?: 0.0)
+                        onSetChange(newReps, currentWeightKg)
                     },
                     onPlusClick = {
                         val baseReps = if (set.reps > 0) set.reps else (previous?.reps ?: 0)
                         val newReps = baseReps + 1
-                        val currentWeight = if (set.weight > 0) set.weight else (previous?.weight ?: 0.0)
-                        onSetChange(newReps, currentWeight)
+                        val currentWeightKg = if (set.weight > 0) set.weight else (previous?.weight ?: 0.0)
+                        onSetChange(newReps, currentWeightKg)
                     },
                     keyboardType = KeyboardType.Number,
                     label = "REPS",
                     workoutColors = workoutColors,
                     trailingContent = {
                         if (previous != null && !set.isWarmup) {
-                            val weightDiff = displayWeight - previous.weight
+                            val weightDiffKg = displayWeight - previous.weight
                             val repsDiff = displayReps - previous.reps
 
                             if (repsDiff > 0) {
@@ -623,7 +630,7 @@ private fun SetRow(
                                     )
                                 }
                             } else if (repsDiff < 0) {
-                                val isWeightUp = weightDiff > 0.001
+                                val isWeightUp = weightDiffKg > 0.001
                                 val bgColor = if (isWeightUp) MaterialTheme.colorScheme.surfaceVariant else workoutColors.downBackground
                                 val textColor = if (isWeightUp) neutralGray else workoutColors.down
 
@@ -661,7 +668,7 @@ private fun SetRow(
                         )
                         Spacer(modifier = Modifier.width(4.dp))
                         Text(
-                            text = "${NumberFormatter.toDisplay(previous.weight)} kg × ${previous.reps}",
+                            text = "${WeightFormatter.format(previous.weight, weightUnit)} × ${previous.reps}",
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                         )
@@ -681,11 +688,12 @@ private fun SetRow(
                         .background(MaterialTheme.colorScheme.surfaceVariant),
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    val oneRepMax = if (displayReps > 0 && displayWeight > 0) {
-                        NumberFormatter.toDisplay(displayWeight * (1 + (displayReps / 30.0)))
+                    val oneRepMaxKg = if (displayReps > 0 && displayWeight > 0) {
+                        displayWeight * (1 + (displayReps / 30.0))
                     } else {
-                        "-"
+                        0.0
                     }
+                    val oneRepMax = if (oneRepMaxKg > 0) WeightFormatter.format(oneRepMaxKg, weightUnit) else "-"
 
                     Column(
                         modifier = Modifier.padding(start = 16.dp)
@@ -696,7 +704,7 @@ private fun SetRow(
                             color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f)
                         )
                         Text(
-                            text = "$oneRepMax kg",
+                            text = oneRepMax,
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface

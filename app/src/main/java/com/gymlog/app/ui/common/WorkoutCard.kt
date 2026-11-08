@@ -132,7 +132,7 @@ fun WorkoutCard(
                 )
                 StatDivider()
                 StatItem(
-                    value = WeightFormatter.format(workout.totalVolume, weightUnit),
+                    value = WeightFormatter.formatCompact(workout.totalVolume, weightUnit),
                     label = "Volumen",
                     modifier = Modifier.weight(1f)
                 )

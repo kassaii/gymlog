@@ -38,8 +38,8 @@ data class CreateWorkoutUiState(
 
     val expandedSet: Pair<Int, Int>? = null,
 
-    // exerciseName -> (setIndex -> set) with the most recent data for each position
-    val previousSetsByExercise: Map<String, Map<Int, ExerciseSet>> = emptyMap()
+    val previousSetsByExercise: Map<String, Map<Int, ExerciseSet>> = emptyMap(),
+    val weightUnit: String = "kg"
 )
 
 class CreateWorkoutViewModel : ViewModel() {
@@ -51,12 +51,21 @@ class CreateWorkoutViewModel : ViewModel() {
     private val _state = MutableStateFlow(CreateWorkoutUiState())
     val state: StateFlow<CreateWorkoutUiState> = _state.asStateFlow()
 
-    // Reference to the timer to cancel it when needed
     private var timerJob: Job? = null
 
     init {
         loadExercises()
         loadPreviousSets()
+        loadUserWeightUnit()
+    }
+
+    private fun loadUserWeightUnit() {
+        viewModelScope.launch {
+            val uid = authRepository.getCurrentUserId() ?: return@launch
+            userRepository.getUserProfile(uid).onSuccess { user ->
+                _state.update { it.copy(weightUnit = user.weightUnit) }
+            }
+        }
     }
 
     private fun loadExercises() {
@@ -78,6 +87,7 @@ class CreateWorkoutViewModel : ViewModel() {
             loadExercises()
         }
         loadPreviousSets()
+        loadUserWeightUnit()
     }
 
     private fun loadPreviousSets() {
@@ -301,10 +311,8 @@ class CreateWorkoutViewModel : ViewModel() {
             val wasCompleted = set.isCompleted
 
             val newSet = if (!wasCompleted) {
-                // If completing the set and it has no real data, use ghost data
                 val ghostSets = currentState.previousSetsByExercise[exercise.exerciseName]
 
-                // Count how many working sets (non-warmup) were completed before this one
                 val workingSetsBefore = updatedSets
                     .take(setIndex)
                     .count { !it.isWarmup && it.isCompleted }
@@ -315,7 +323,6 @@ class CreateWorkoutViewModel : ViewModel() {
                     ghostSets?.get(workingSetsBefore)
                 }
 
-                // Use ghost weight/reps if the current set is empty
                 val weightToUse = if (set.weight == 0.0 && ghost != null) ghost.weight else set.weight
                 val repsToUse = if (set.reps == 0 && ghost != null) ghost.reps else set.reps
 

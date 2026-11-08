@@ -23,7 +23,8 @@ data class FollowingFeedUiState(
     val isSearchingUsers: Boolean = false,
     val error: String? = null,
     val isSearchActive: Boolean = false,
-    val searchQuery: String = ""
+    val searchQuery: String = "",
+    val weightUnit: String = "kg"
 )
 
 class FollowingFeedViewModel : ViewModel() {
@@ -49,6 +50,9 @@ class FollowingFeedViewModel : ViewModel() {
         viewModelScope.launch {
             currentUserId = authRepository.getCurrentUserId()
             currentUserId?.let { uid ->
+                userRepository.getUserProfile(uid).onSuccess { user ->
+                    _state.update { it.copy(weightUnit = user.weightUnit) }
+                }
                 userRepository.getFollowingIds(uid).onSuccess { ids ->
                     myFollowingIds = ids.toSet()
                 }

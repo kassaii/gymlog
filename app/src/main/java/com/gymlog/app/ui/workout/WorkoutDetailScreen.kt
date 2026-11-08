@@ -178,7 +178,7 @@ fun WorkoutDetailScreen(
                                 modifier = Modifier.weight(1f),
                                 icon = Icons.Default.FitnessCenter,
                                 label = "Volumen",
-                                value = WeightFormatter.format(workout.totalVolume, "kg")
+                                value = WeightFormatter.formatCompact(workout.totalVolume, state.weightUnit)
                             )
                             StatCard(
                                 modifier = Modifier.weight(1f),
@@ -196,7 +196,7 @@ fun WorkoutDetailScreen(
                     }
 
                     items(workout.exercises) { exercise ->
-                        ReadOnlyWorkoutExerciseCard(exercise = exercise)
+                        ReadOnlyWorkoutExerciseCard(exercise = exercise, weightUnit = state.weightUnit)
                     }
                 }
             }
@@ -273,7 +273,7 @@ private fun StatCard(
 }
 
 @Composable
-private fun ReadOnlyWorkoutExerciseCard(exercise: WorkoutExercise) {
+private fun ReadOnlyWorkoutExerciseCard(exercise: WorkoutExercise, weightUnit: String) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
@@ -320,7 +320,7 @@ private fun ReadOnlyWorkoutExerciseCard(exercise: WorkoutExercise) {
             ) {
                 HeaderCell("SERIE", Modifier.width(44.dp))
                 Spacer(modifier = Modifier.width(6.dp))
-                HeaderCell("KG", Modifier.weight(1f), icon = Icons.Default.FitnessCenter)
+                HeaderCell(weightUnit.uppercase(), Modifier.weight(1f), icon = Icons.Default.FitnessCenter)
                 Spacer(modifier = Modifier.width(6.dp))
                 HeaderCell("REPS", Modifier.weight(1f), icon = Icons.Default.Repeat)
                 Spacer(modifier = Modifier.width(6.dp))
@@ -334,7 +334,7 @@ private fun ReadOnlyWorkoutExerciseCard(exercise: WorkoutExercise) {
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 exercise.sets.forEachIndexed { index, set ->
-                    ReadOnlySetRow(label = "${index + 1}", set = set)
+                    ReadOnlySetRow(label = "${index + 1}", set = set, weightUnit = weightUnit)
                 }
             }
         }
@@ -342,8 +342,9 @@ private fun ReadOnlyWorkoutExerciseCard(exercise: WorkoutExercise) {
 }
 
 @Composable
-private fun ReadOnlySetRow(label: String, set: ExerciseSet) {
+private fun ReadOnlySetRow(label: String, set: ExerciseSet, weightUnit: String) {
     val workoutColors = LocalWorkoutColors.current
+    val displayWeight = if (weightUnit == "kg") set.weight else WeightFormatter.kgToLb(set.weight)
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -353,7 +354,6 @@ private fun ReadOnlySetRow(label: String, set: ExerciseSet) {
             .background(MaterialTheme.colorScheme.surface)
             .padding(horizontal = 12.dp, vertical = 12.dp)
     ) {
-        // Set number / Check icon
         Box(
             modifier = Modifier.width(40.dp),
             contentAlignment = Alignment.Center
@@ -391,13 +391,12 @@ private fun ReadOnlySetRow(label: String, set: ExerciseSet) {
 
         Spacer(modifier = Modifier.width(6.dp))
 
-        // Weight
         Box(
             modifier = Modifier.weight(1f),
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = NumberFormatter.toDisplay(set.weight),
+                text = NumberFormatter.toDisplay(displayWeight),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
                 color = if (set.isWarmup) workoutColors.warmup else MaterialTheme.colorScheme.onSurface
@@ -406,7 +405,6 @@ private fun ReadOnlySetRow(label: String, set: ExerciseSet) {
 
         Spacer(modifier = Modifier.width(6.dp))
 
-        // Reps
         Box(
             modifier = Modifier.weight(1f),
             contentAlignment = Alignment.Center
@@ -421,22 +419,20 @@ private fun ReadOnlySetRow(label: String, set: ExerciseSet) {
 
         Spacer(modifier = Modifier.width(6.dp))
 
-        // Progress badge
         Box(
             modifier = Modifier.weight(1.2f),
             contentAlignment = Alignment.Center
         ) {
-            val weightDiff = set.progressDiff ?: 0.0
+            val weightDiffKg = set.progressDiff ?: 0.0
             val repsDiff = set.repsProgressDiff ?: 0
 
-            if (weightDiff != 0.0 || repsDiff != 0) {
-                // Mixed signal: weight down, reps up
-                val isMixedSignal = weightDiff < -0.001 && repsDiff > 0
+            if (weightDiffKg != 0.0 || repsDiff != 0) {
+                val isMixedSignal = weightDiffKg < -0.001 && repsDiff > 0
 
                 val progressText = when {
-                    isMixedSignal -> "${NumberFormatter.toDisplay(weightDiff)} / +$repsDiff"
-                    weightDiff > 0.001 -> "+${NumberFormatter.toDisplay(weightDiff)} kg"
-                    weightDiff < -0.001 -> "${NumberFormatter.toDisplay(weightDiff)} kg"
+                    isMixedSignal -> "${WeightFormatter.formatDiff(weightDiffKg, weightUnit)} / +$repsDiff"
+                    weightDiffKg > 0.001 -> "+${WeightFormatter.formatDiff(weightDiffKg, weightUnit)} $weightUnit"
+                    weightDiffKg < -0.001 -> "${WeightFormatter.formatDiff(weightDiffKg, weightUnit)} $weightUnit"
                     repsDiff > 0 -> if (repsDiff == 1) "+1 rep" else "+$repsDiff reps"
                     repsDiff < 0 -> {
                         val absReps = kotlin.math.abs(repsDiff)
@@ -446,20 +442,20 @@ private fun ReadOnlySetRow(label: String, set: ExerciseSet) {
                 }
 
                 val progressTextColor = when {
-                    weightDiff > 0.001 -> workoutColors.up
-                    weightDiff == 0.0 && repsDiff > 0 -> workoutColors.up
-                    weightDiff < -0.001 && repsDiff > 0 -> MaterialTheme.colorScheme.onSurfaceVariant
-                    weightDiff < -0.001 -> workoutColors.down
-                    weightDiff == 0.0 && repsDiff < 0 -> workoutColors.down
+                    weightDiffKg > 0.001 -> workoutColors.up
+                    weightDiffKg == 0.0 && repsDiff > 0 -> workoutColors.up
+                    weightDiffKg < -0.001 && repsDiff > 0 -> MaterialTheme.colorScheme.onSurfaceVariant
+                    weightDiffKg < -0.001 -> workoutColors.down
+                    weightDiffKg == 0.0 && repsDiff < 0 -> workoutColors.down
                     else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
                 }
 
                 val progressBackground = when {
-                    weightDiff > 0.001 -> workoutColors.upBackground
-                    weightDiff == 0.0 && repsDiff > 0 -> workoutColors.upBackground
-                    weightDiff < -0.001 && repsDiff > 0 -> MaterialTheme.colorScheme.surfaceVariant
-                    weightDiff < -0.001 -> workoutColors.downBackground
-                    weightDiff == 0.0 && repsDiff < 0 -> workoutColors.downBackground
+                    weightDiffKg > 0.001 -> workoutColors.upBackground
+                    weightDiffKg == 0.0 && repsDiff > 0 -> workoutColors.upBackground
+                    weightDiffKg < -0.001 && repsDiff > 0 -> MaterialTheme.colorScheme.surfaceVariant
+                    weightDiffKg < -0.001 -> workoutColors.downBackground
+                    weightDiffKg == 0.0 && repsDiff < 0 -> workoutColors.downBackground
                     else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)
                 }
 
@@ -480,7 +476,7 @@ private fun ReadOnlySetRow(label: String, set: ExerciseSet) {
                         Spacer(modifier = Modifier.width(3.dp))
                     } else {
                         Icon(
-                            imageVector = if (weightDiff > 0.001 || repsDiff > 0) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
+                            imageVector = if (weightDiffKg > 0.001 || repsDiff > 0) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
                             contentDescription = null,
                             modifier = Modifier.size(16.dp),
                             tint = progressTextColor
