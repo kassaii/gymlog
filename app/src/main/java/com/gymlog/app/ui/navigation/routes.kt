@@ -25,6 +25,11 @@ object Routes {
     const val USER_PROFILE = "user_profile/{$USER_ID}"
     fun userProfile(userId: String) = "user_profile/$userId"
 
+    // User List (followers / following)
+    const val LIST_TYPE = "listType"
+    const val USER_LIST = "user_list/{$USER_ID}/{$LIST_TYPE}"
+    fun userList(userId: String, listType: String) = "user_list/$userId/$listType"
+
     // Settings
     const val SETTINGS = "settings"
 }

@@ -120,6 +120,20 @@ class UserRepository {
         }
     }
 
+    // Gets the list of user follower IDs
+    suspend fun getFollowersIds(uid: String): Result<List<String>> {
+        return try {
+            val snapshot = usersCollection
+                .whereArrayContains("followingIds", uid)
+                .get()
+                .await()
+            val followers = snapshot.documents.mapNotNull { it.id }
+            Result.success(followers)
+        } catch (e: Exception) {
+            Result.failure(e)
+        }
+    }
+
     // Follows a user using a batch to update both users atomically
     suspend fun followUser(currentUid: String, targetUid: String): Result<Unit> {
         if (currentUid == targetUid) {

@@ -1,6 +1,7 @@
 package com.gymlog.app.ui.profile
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -31,6 +32,8 @@ import com.gymlog.app.util.WeightFormatter
 fun UserProfileScreen(
     onBack: () -> Unit,
     onWorkoutClick: (String) -> Unit,
+    onFollowersClick: () -> Unit,
+    onFollowingClick: () -> Unit,
     viewModel: UserProfileViewModel
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -122,11 +125,11 @@ fun UserProfileScreen(
                             .padding(vertical = 12.dp),
                         horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        StatItem(value = "${state.workouts.size}", label = "Entrenos")
+                        StatItem(value = "${state.workouts.size}", label = "Entrenos", onClick = {})
                         StatDivider()
-                        StatItem(value = "${user.followersCount}", label = "Seguidores")
+                        StatItem(value = "${user.followersCount}", label = "Seguidores", onClick = onFollowersClick)
                         StatDivider()
-                        StatItem(value = "${user.followingCount}", label = "Seguidos")
+                        StatItem(value = "${user.followingCount}", label = "Seguidos", onClick = onFollowingClick)
                     }
                 }
 
@@ -230,8 +233,14 @@ private fun StatCard(
 }
 
 @Composable
-private fun StatItem(value: String, label: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+private fun StatItem(value: String, label: String, onClick: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(MaterialTheme.shapes.small)
+            .clickable { onClick() }
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
         Text(text = value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
         Text(text = label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }

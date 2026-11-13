@@ -1,6 +1,7 @@
 package com.gymlog.app.ui.profile
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -32,6 +33,8 @@ import com.gymlog.app.util.WeightFormatter
 fun ProfileScreen(
     onWorkoutClick: (String) -> Unit,
     onSettingsClick: () -> Unit,
+    onFollowersClick: () -> Unit,
+    onFollowingClick: () -> Unit,
     viewModel: ProfileViewModel = viewModel()
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -97,7 +100,9 @@ fun ProfileScreen(
                     ProfileStats(
                         workoutsCount = state.workouts.size,
                         followersCount = state.user!!.followersCount,
-                        followingCount = state.user!!.followingCount
+                        followingCount = state.user!!.followingCount,
+                        onFollowersClick = onFollowersClick,
+                        onFollowingClick = onFollowingClick
                     )
                 }
 
@@ -234,7 +239,9 @@ private fun StatCard(
 private fun ProfileStats(
     workoutsCount: Int,
     followersCount: Int,
-    followingCount: Int
+    followingCount: Int,
+    onFollowersClick: () -> Unit,
+    onFollowingClick: () -> Unit
 ) {
     Row(
         modifier = Modifier
@@ -244,17 +251,23 @@ private fun ProfileStats(
             .padding(vertical = 12.dp),
         horizontalArrangement = Arrangement.SpaceEvenly
     ) {
-        StatItem(value = "$workoutsCount", label = "Entrenos")
+        StatItem(value = "$workoutsCount", label = "Entrenos", onClick = {})
         StatDivider()
-        StatItem(value = "$followersCount", label = "Seguidores")
+        StatItem(value = "$followersCount", label = "Seguidores", onClick = onFollowersClick)
         StatDivider()
-        StatItem(value = "$followingCount", label = "Seguidos")
+        StatItem(value = "$followingCount", label = "Seguidos", onClick = onFollowingClick)
     }
 }
 
 @Composable
-private fun StatItem(value: String, label: String) {
-    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+private fun StatItem(value: String, label: String, onClick: () -> Unit) {
+    Column(
+        horizontalAlignment = Alignment.CenterHorizontally,
+        modifier = Modifier
+            .clip(MaterialTheme.shapes.small)
+            .clickable { onClick() }
+            .padding(horizontal = 16.dp, vertical = 8.dp)
+    ) {
         Text(
             text = value,
             style = MaterialTheme.typography.titleLarge,

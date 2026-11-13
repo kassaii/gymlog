@@ -20,6 +20,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -28,6 +29,7 @@ import com.gymlog.app.ui.feed.explore.ExploreFeedScreen
 import com.gymlog.app.ui.feed.following.FollowingFeedScreen
 import com.gymlog.app.ui.navigation.Routes
 import com.gymlog.app.ui.profile.ProfileScreen
+import com.gymlog.app.ui.profile.ProfileViewModel
 import com.gymlog.app.ui.workout.CreateWorkoutViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -129,14 +131,31 @@ fun MainScreen(
                         }
                     }
                 }
-                "profile" -> ProfileScreen(
-                    onWorkoutClick = { workoutId ->
-                        navController.navigate(Routes.workoutDetail(workoutId))
-                    },
-                    onSettingsClick = {
-                        navController.navigate(Routes.SETTINGS)
-                    }
-                )
+                "profile" -> {
+                    val profileViewModel: ProfileViewModel = viewModel()
+                    val profileState by profileViewModel.state.collectAsStateWithLifecycle()
+                    val currentUid = profileState.user?.uid ?: ""
+
+                    ProfileScreen(
+                        onWorkoutClick = { workoutId ->
+                            navController.navigate(Routes.workoutDetail(workoutId))
+                        },
+                        onSettingsClick = {
+                            navController.navigate(Routes.SETTINGS)
+                        },
+                        onFollowersClick = {
+                            if (currentUid.isNotEmpty()) {
+                                navController.navigate(Routes.userList(currentUid, "followers"))
+                            }
+                        },
+                        onFollowingClick = {
+                            if (currentUid.isNotEmpty()) {
+                                navController.navigate(Routes.userList(currentUid, "following"))
+                            }
+                        },
+                        viewModel = profileViewModel
+                    )
+                }
             }
         }
     }

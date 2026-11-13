@@ -10,6 +10,10 @@ import androidx.navigation.navArgument
 import com.gymlog.app.ui.auth.LoginScreen
 import com.gymlog.app.ui.auth.RegisterScreen
 import com.gymlog.app.ui.main.MainScreen
+import com.gymlog.app.ui.profile.UserListScreen
+import com.gymlog.app.ui.profile.UserListType
+import com.gymlog.app.ui.profile.UserListViewModel
+import com.gymlog.app.ui.profile.UserListViewModelFactory
 import com.gymlog.app.ui.profile.UserProfileScreen
 import com.gymlog.app.ui.profile.UserProfileViewModel
 import com.gymlog.app.ui.profile.UserProfileViewModelFactory
@@ -102,6 +106,37 @@ fun AppNavigation(
                 onBack = { navController.popBackStack() },
                 onWorkoutClick = { workoutId ->
                     navController.navigate(Routes.workoutDetail(workoutId))
+                },
+                onFollowersClick = {
+                    navController.navigate(Routes.userList(userId, "followers"))
+                },
+                onFollowingClick = {
+                    navController.navigate(Routes.userList(userId, "following"))
+                },
+                viewModel = viewModel
+            )
+        }
+
+        composable(
+            route = Routes.USER_LIST,
+            arguments = listOf(
+                navArgument(Routes.USER_ID) { type = NavType.StringType },
+                navArgument(Routes.LIST_TYPE) { type = NavType.StringType }
+            )
+        ) { backStackEntry ->
+            val userId = backStackEntry.arguments?.getString(Routes.USER_ID) ?: ""
+            val listTypeStr = backStackEntry.arguments?.getString(Routes.LIST_TYPE) ?: "following"
+            val listType = UserListType.valueOf(listTypeStr.uppercase())
+
+            val viewModel: UserListViewModel = viewModel(
+                factory = UserListViewModelFactory(userId, listType)
+            )
+
+            UserListScreen(
+                listType = listType,
+                onBack = { navController.popBackStack() },
+                onUserClick = { clickedUserId ->
+                    navController.navigate(Routes.userProfile(clickedUserId))
                 },
                 viewModel = viewModel
             )
