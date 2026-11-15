@@ -1,9 +1,8 @@
+
 package com.gymlog.app.ui.profile
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
@@ -22,13 +21,11 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import coil.compose.AsyncImage
-import com.gymlog.app.data.model.User
+import com.gymlog.app.ui.common.UserRow
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,10 +46,18 @@ fun UserListScreen(
         containerColor = MaterialTheme.colorScheme.background,
         topBar = {
             TopAppBar(
-                title = { Text(title, fontWeight = FontWeight.Bold) },
+                title = {
+                    Text(
+                        text = title,
+                        fontWeight = FontWeight.Bold
+                    )
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Volver"
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -72,7 +77,10 @@ fun UserListScreen(
             )
 
             if (state.isLoading) {
-                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Box(
+                    modifier = Modifier.fillMaxSize(),
+                    contentAlignment = Alignment.Center
+                ) {
                     CircularProgressIndicator()
                 }
             } else if (state.filteredUsers.isEmpty()) {
@@ -84,18 +92,25 @@ fun UserListScreen(
                 LazyColumn(
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(state.filteredUsers, key = { it.uid }) { user ->
-                        val isFollowing = state.currentUserFollowingIds.contains(user.uid)
+                    items(
+                        items = state.filteredUsers,
+                        key = { it.uid }
+                    ) { user ->
+                        val isFollowing =
+                            state.currentUserFollowingIds.contains(user.uid)
 
-                        UserListRow(
+                        UserRow(
                             user = user,
                             isFollowing = isFollowing,
                             onClick = { onUserClick(user.uid) },
                             onToggleFollow = { viewModel.toggleFollow(user.uid) }
                         )
+
                         HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 16.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(
+                                alpha = 0.3f
+                            )
                         )
                     }
                 }
@@ -121,15 +136,21 @@ private fun SearchBarLocal(
             .background(bgColor)
             .padding(horizontal = 12.dp, vertical = 10.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically
+        ) {
             Icon(
                 imageVector = Icons.Default.Search,
                 contentDescription = null,
                 tint = hintColor,
                 modifier = Modifier.size(20.dp)
             )
+
             Spacer(modifier = Modifier.width(8.dp))
-            Box(modifier = Modifier.weight(1f)) {
+
+            Box(
+                modifier = Modifier.weight(1f)
+            ) {
                 if (query.isEmpty()) {
                     Text(
                         text = "Buscar usuario",
@@ -137,64 +158,20 @@ private fun SearchBarLocal(
                         color = hintColor
                     )
                 }
+
                 BasicTextField(
                     value = query,
                     onValueChange = onQueryChange,
                     singleLine = true,
-                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = textColor),
-                    cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                    textStyle = MaterialTheme.typography.bodyLarge.copy(
+                        color = textColor
+                    ),
+                    cursorBrush = SolidColor(
+                        MaterialTheme.colorScheme.primary
+                    ),
                     modifier = Modifier.fillMaxWidth()
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun UserListRow(
-    user: User,
-    isFollowing: Boolean,
-    onClick: () -> Unit,
-    onToggleFollow: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 12.dp),
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        AsyncImage(
-            model = user.photoUrl,
-            contentDescription = "Foto de ${user.username}",
-            contentScale = ContentScale.Crop,
-            modifier = Modifier
-                .size(56.dp)
-                .clip(CircleShape)
-                .background(MaterialTheme.colorScheme.surfaceVariant)
-        )
-        Spacer(modifier = Modifier.width(16.dp))
-
-        Column(modifier = Modifier.weight(1f)) {
-            Text(
-                text = user.username,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold
-            )
-        }
-
-        Surface(
-            shape = RoundedCornerShape(8.dp),
-            color = if (isFollowing) MaterialTheme.colorScheme.surfaceVariant else MaterialTheme.colorScheme.primary,
-            onClick = onToggleFollow
-        ) {
-            Text(
-                text = if (isFollowing) "Siguiendo" else "Seguir",
-                style = MaterialTheme.typography.labelLarge,
-                fontWeight = FontWeight.SemiBold,
-                color = if (isFollowing) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onPrimary,
-                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
-            )
         }
     }
 }
@@ -210,11 +187,13 @@ private fun EmptyStateView(
             "Sin resultados",
             "No hay usuarios que coincidan con \"${searchQuery.trim()}\""
         )
+
         listType == UserListType.FOLLOWERS -> Triple(
             Icons.Outlined.PeopleOutline,
             "Aún no tienes seguidores",
             "Cuando alguien te siga, aparecerá en esta lista"
         )
+
         else -> Triple(
             Icons.Outlined.PersonAdd,
             "Aún no sigues a nadie",
@@ -233,7 +212,10 @@ private fun EmptyStateView(
         Box(
             modifier = Modifier
                 .size(96.dp)
-                .background(MaterialTheme.colorScheme.surfaceVariant, CircleShape),
+                .background(
+                    MaterialTheme.colorScheme.surfaceVariant,
+                    CircleShape
+                ),
             contentAlignment = Alignment.Center
         ) {
             Icon(
@@ -243,14 +225,18 @@ private fun EmptyStateView(
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }
-        Spacer(Modifier.height(24.dp))
+
+        Spacer(modifier = Modifier.height(24.dp))
+
         Text(
             text = title,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             textAlign = TextAlign.Center
         )
-        Spacer(Modifier.height(8.dp))
+
+        Spacer(modifier = Modifier.height(8.dp))
+
         Text(
             text = subtitle,
             style = MaterialTheme.typography.bodyMedium,
