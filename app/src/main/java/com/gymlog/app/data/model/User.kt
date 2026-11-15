@@ -16,5 +16,4 @@ data class User(
     val followersCount: Int = 0,
     val followingCount: Int = 0,
     val followingIds: List<String> = emptyList()
-
 )
