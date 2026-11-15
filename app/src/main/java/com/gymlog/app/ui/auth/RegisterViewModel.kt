@@ -1,3 +1,4 @@
+
 package com.gymlog.app.ui.auth
 
 import androidx.lifecycle.ViewModel
@@ -9,7 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-// Register screen state
+// Represents the current state of the register screen
 data class RegisterUiState(
     val email: String = "",
     val password: String = "",
@@ -19,37 +20,38 @@ data class RegisterUiState(
     val registerSuccess: Boolean = false
 )
 
-// Register screen ViewModel
+// Manages the register screen state and user registration
 class RegisterViewModel : ViewModel() {
 
     private val authRepository = AuthRepository()
 
-
-    // Internal state (mutable and private). Only the ViewModel can modify it
     private val _state = MutableStateFlow(RegisterUiState())
-
-    // Exposed state (immutable and public). The Screen can only read it
-    // The pattern prevents the Screen from modifying the ViewModel's state by mistake
     val state: StateFlow<RegisterUiState> = _state.asStateFlow()
 
+    // Updates the email entered by the user in the register form
     fun onEmailChange(email: String) {
         _state.update { it.copy(email = email) }
     }
 
+    // Updates the password entered by the user in the register form
     fun onPasswordChange(password: String) {
         _state.update { it.copy(password = password) }
     }
 
+    // Updates the username entered by the user in the register form
     fun onUsernameChange(username: String) {
         _state.update { it.copy(username = username) }
     }
 
+    // Validates the entered data and attempts to register a new user
+    // through the repository, updating the screen state with the result
     fun onRegisterClicked() {
+        if (_state.value.isLoading) return
+
         val email = _state.value.email
         val password = _state.value.password
         val username = _state.value.username
 
-        // Extra validations
         if (email.isBlank()) {
             _state.update { it.copy(error = "El email no puede estar vacío") }
             return
@@ -71,18 +73,17 @@ class RegisterViewModel : ViewModel() {
         }
 
         viewModelScope.launch {
-
-            // Set loading to true and clear previous error
             _state.update { it.copy(isLoading = true, error = null) }
 
-            // Call the repository
             val result = authRepository.register(email, password, username)
 
-            // Handle the result
-            // Fold handles both success and failure
             result.fold(
-                onSuccess = { _state.update { it.copy(isLoading = false, registerSuccess = true) } },
-                onFailure = { error -> _state.update { it.copy(isLoading = false, error = error.message) } }
+                onSuccess = {
+                    _state.update { it.copy(isLoading = false, registerSuccess = true) }
+                },
+                onFailure = { error ->
+                    _state.update { it.copy(isLoading = false, error = error.message) }
+                }
             )
         }
     }

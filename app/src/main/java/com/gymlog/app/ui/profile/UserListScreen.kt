@@ -181,13 +181,6 @@ private fun UserListRow(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
-            if (user.email.isNotBlank()) {
-                Text(
-                    text = user.email.substringBefore("@"),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
         }
 
         Surface(

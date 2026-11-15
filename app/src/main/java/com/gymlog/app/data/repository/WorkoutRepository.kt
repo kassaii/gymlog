@@ -1,5 +1,6 @@
 package com.gymlog.app.data.repository
 
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.Query
 import com.gymlog.app.data.model.Exercise
@@ -11,15 +12,15 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
+// Handles workout storage and progress tracking in Firestore
 class WorkoutRepository {
 
-    // Firestore instance
     private val firestore = FirebaseFirestore.getInstance()
 
-    // Shortcut to the "workouts" collection
     private val workoutsCollection = firestore.collection("workouts")
 
-    // Saves a workout in Firestore with a pre-generated document id.
+    // Saves a new workout in Firestore and compares its sets with the previous workout
+    // to calculate progress before saving
     suspend fun saveWorkout(
         userId: String,
         username: String,
@@ -32,16 +33,16 @@ class WorkoutRepository {
         exercises: List<WorkoutExercise>
     ): Result<Workout> {
         return try {
-            // Generate a new document reference to get a unique id beforehand
+            if (FirebaseAuth.getInstance().currentUser?.uid != userId) {
+                return Result.failure(IllegalStateException("No autorizado"))
+            }
             val docRef = workoutsCollection.document()
 
-            // Fetch the previous workout for this user (if any)
             val previousWorkout = getPreviousWorkout(
                 userId = userId,
                 beforeTimestamp = System.currentTimeMillis()
             ).getOrNull()
 
-            // Calculate progressDiff for each set
             val exercisesWithProgress = exercises.map { currentExercise ->
                 val previousExercise = previousWorkout?.exercises?.find {
                     it.exerciseId == currentExercise.exerciseId ||
@@ -69,7 +70,6 @@ class WorkoutRepository {
                 currentExercise.copy(sets = updatedSets)
             }
 
-            // Calculate total progress count (sets with positive progress)
             val progressCount = exercisesWithProgress
                 .flatMap { it.sets }
                 .count { it.progressDiff != null && it.progressDiff > 0 }
@@ -89,7 +89,6 @@ class WorkoutRepository {
                 exercises = exercisesWithProgress
             )
 
-            // Save the workout
             docRef.set(workout).await()
 
             Result.success(workout)
@@ -98,7 +97,8 @@ class WorkoutRepository {
         }
     }
 
-    // Gets the most recent workouts from all users (for the Explore feed)
+    // Loads the most recent workouts from all users
+    // ordered by date for the Explore feed
     suspend fun getRecentWorkouts(limit: Long = 50): Result<List<Workout>> {
         return try {
             val snapshot = workoutsCollection
@@ -117,7 +117,8 @@ class WorkoutRepository {
         }
     }
 
-    // Gets workouts from a list of userIds (the users the current user follows).
+    // Loads workouts from followed users in groups
+    // and sorts the results by date
     suspend fun getWorkoutsByFollowingIds(followingIds: List<String>): Result<List<Workout>> {
         return try {
             if (followingIds.isEmpty()) {
@@ -147,15 +148,25 @@ class WorkoutRepository {
         }
     }
 
+    // Deletes a workout from Firestore after checking
+    // that it belongs to the signed-in user
     suspend fun deleteWorkout(workoutId: String): Result<Unit> {
         return try {
-            workoutsCollection.document(workoutId).delete().await()
+            val uid = FirebaseAuth.getInstance().currentUser?.uid
+                ?: return Result.failure(IllegalStateException("No autorizado"))
+            val ref = workoutsCollection.document(workoutId)
+            if (ref.get().await().getString("userId") != uid) {
+                return Result.failure(IllegalStateException("No puedes eliminar este entrenamiento"))
+            }
+            ref.delete().await()
             Result.success(Unit)
         } catch (e: Exception) {
             Result.failure(e)
         }
     }
 
+    // Loads the exercise library from Firestore
+    // and returns the exercises sorted by name
     suspend fun getExercises(): Result<List<Exercise>> {
         return try {
             val snapshot = firestore.collection("exercises").get().await()
@@ -171,7 +182,8 @@ class WorkoutRepository {
         }
     }
 
-    // Gets all workouts of a specific user, ordered by date descending
+    // Loads all workouts created by a specific user
+    // ordered from newest to oldest
     suspend fun getWorkoutsByUserId(userId: String): Result<List<Workout>> {
         return try {
             val snapshot = workoutsCollection
@@ -190,7 +202,8 @@ class WorkoutRepository {
         }
     }
 
-    // Observes all workouts of a specific user in real time, ordered by date descending
+    // Listens for changes to a user's workouts in real time
+    // and emits the updated list
     fun observeWorkoutsByUserId(userId: String): Flow<List<Workout>> = callbackFlow {
         val listener = workoutsCollection
             .whereEqualTo("userId", userId)
@@ -210,7 +223,7 @@ class WorkoutRepository {
         awaitClose { listener.remove() }
     }
 
-    // Gets a workout by id
+    // Finds a workout in Firestore using its document ID
     suspend fun getWorkoutById(workoutId: String): Result<Workout> {
         return try {
             val document = workoutsCollection.document(workoutId).get().await()
@@ -225,7 +238,8 @@ class WorkoutRepository {
         }
     }
 
-    // Gets the most recent workout for a user that was saved before the given timestamp
+    // Finds the most recent workout saved by a user
+    // before a given timestamp
     private suspend fun getPreviousWorkout(userId: String, beforeTimestamp: Long): Result<Workout?> {
         return try {
             val snapshot = workoutsCollection
@@ -245,10 +259,8 @@ class WorkoutRepository {
         }
     }
 
-    // Returns a map of exerciseName.
-    // Iterates workouts from most recent to oldest, filling in the most recent
-    // set found for each position so older sets can fill gaps if the most recent
-    // workout had fewer sets.
+    // Loads recent workouts and collects the latest working sets
+    // for each exercise and set position
     suspend fun getPreviousSetsByExercise(
         userId: String,
         limit: Long = 50
@@ -280,7 +292,6 @@ class WorkoutRepository {
                 }
             }
 
-            // Safety
             val finalMap: Map<String, Map<Int, ExerciseSet>> = result.mapValues { it.value.toMap() }
             Result.success(finalMap)
         } catch (e: Exception) {

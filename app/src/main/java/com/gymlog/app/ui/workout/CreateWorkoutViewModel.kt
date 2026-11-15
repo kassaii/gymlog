@@ -18,6 +18,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 
+// Represents the current state of the workout creation screen
 data class CreateWorkoutUiState(
     val title: String = "",
     val description: String = "",
@@ -43,6 +44,7 @@ data class CreateWorkoutUiState(
     val weightUnit: String = "kg"
 )
 
+// Manages workout creation, exercises, sets, and the workout timer
 class CreateWorkoutViewModel : ViewModel() {
 
     private val workoutRepository = WorkoutRepository()
@@ -60,6 +62,7 @@ class CreateWorkoutViewModel : ViewModel() {
         observeWeightUnit()
     }
 
+    // Observes the user's weight unit and updates it when it changes
     private fun observeWeightUnit() {
         viewModelScope.launch {
             val uid = authRepository.getCurrentUserId() ?: return@launch
@@ -69,6 +72,7 @@ class CreateWorkoutViewModel : ViewModel() {
         }
     }
 
+    // Loads the exercise library and updates the available exercises
     private fun loadExercises() {
         viewModelScope.launch {
             _state.update { it.copy(isLoadingExercises = true) }
@@ -83,6 +87,7 @@ class CreateWorkoutViewModel : ViewModel() {
         }
     }
 
+    // Reloads exercises if the list is empty and refreshes previous sets
     fun reloadExercisesIfNeeded() {
         if (_state.value.availableExercises.isEmpty() && !_state.value.isLoadingExercises) {
             loadExercises()
@@ -90,6 +95,7 @@ class CreateWorkoutViewModel : ViewModel() {
         loadPreviousSets()
     }
 
+    // Loads the latest saved sets for each exercise to use as previous values
     private fun loadPreviousSets() {
         viewModelScope.launch {
             val uid = authRepository.getCurrentUserId() ?: return@launch
@@ -102,6 +108,7 @@ class CreateWorkoutViewModel : ViewModel() {
         }
     }
 
+    // Starts the workout timer when no exercises or elapsed time are recorded
     fun startWorkoutIfNeeded() {
         if (_state.value.exercises.isEmpty() && _state.value.elapsedSeconds == 0) {
             _state.update { it.copy(isTimerRunning = true) }
@@ -109,6 +116,7 @@ class CreateWorkoutViewModel : ViewModel() {
         }
     }
 
+    // Starts a coroutine that counts elapsed workout seconds while running
     private fun startTimer() {
         timerJob?.cancel()
         timerJob = viewModelScope.launch {
@@ -121,22 +129,27 @@ class CreateWorkoutViewModel : ViewModel() {
         }
     }
 
+    // Pauses the workout timer without resetting the elapsed time
     fun onPauseTimer() {
         _state.update { it.copy(isTimerRunning = false) }
     }
 
+    // Resumes counting elapsed workout time
     fun onResumeTimer() {
         _state.update { it.copy(isTimerRunning = true) }
     }
 
+    // Updates the workout title in the screen state
     fun onTitleChange(title: String) {
         _state.update { it.copy(title = title) }
     }
 
+    // Updates the workout description in the screen state
     fun onDescriptionChange(description: String) {
         _state.update { it.copy(description = description) }
     }
 
+    // Expands the selected set or collapses it if already expanded
     fun onToggleSetExpansion(exerciseIndex: Int, setIndex: Int) {
         _state.update { currentState ->
             val current = currentState.expandedSet
@@ -148,6 +161,7 @@ class CreateWorkoutViewModel : ViewModel() {
         }
     }
 
+    // Opens or closes the exercise picker and resets its filters
     fun onShowExerciseDialog(show: Boolean) {
         _state.update {
             it.copy(
@@ -159,6 +173,7 @@ class CreateWorkoutViewModel : ViewModel() {
         }
     }
 
+    // Adds or removes an exercise from the current selection
     fun onToggleExerciseSelection(exerciseId: String) {
         _state.update { currentState ->
             val currentSelection = currentState.selectedExerciseIds
@@ -171,14 +186,17 @@ class CreateWorkoutViewModel : ViewModel() {
         }
     }
 
+    // Updates the search text used to filter available exercises
     fun onSearchQueryChange(query: String) {
         _state.update { it.copy(searchQuery = query) }
     }
 
+    // Updates the selected muscle group filter
     fun onMuscleGroupFilterChange(muscleGroup: String?) {
         _state.update { it.copy(selectedMuscleGroup = muscleGroup) }
     }
 
+    // Adds selected exercises with an initial set and expands the first new set
     fun onConfirmAddExercises() {
         val currentState = _state.value
         val exercisesToAdd = currentState.availableExercises.filter {
@@ -209,6 +227,7 @@ class CreateWorkoutViewModel : ViewModel() {
         }
     }
 
+    // Removes an exercise and clears its previous-set data from the state
     fun onRemoveExercise(exerciseIndex: Int) {
         _state.update { currentState ->
             val exerciseToRemove = currentState.exercises.getOrNull(exerciseIndex)?.exerciseName
@@ -227,6 +246,7 @@ class CreateWorkoutViewModel : ViewModel() {
         }
     }
 
+    // Moves an exercise to a new position and adjusts the expanded set
     fun onMoveExercise(fromIndex: Int, toIndex: Int) {
         _state.update { currentState ->
             val exercises = currentState.exercises.toMutableList()
@@ -245,6 +265,7 @@ class CreateWorkoutViewModel : ViewModel() {
         }
     }
 
+    // Adds an empty set to an exercise and expands the new set
     fun onAddSet(exerciseIndex: Int) {
         _state.update {
             val updated = it.exercises.toMutableList()
@@ -260,6 +281,7 @@ class CreateWorkoutViewModel : ViewModel() {
         }
     }
 
+    // Removes a set from an exercise and adjusts the expanded set
     fun onRemoveSet(exerciseIndex: Int, setIndex: Int) {
         _state.update { currentState ->
             val updated = currentState.exercises.toMutableList()
@@ -279,6 +301,7 @@ class CreateWorkoutViewModel : ViewModel() {
         }
     }
 
+    // Updates the repetitions and weight of a selected set
     fun onSetChange(exerciseIndex: Int, setIndex: Int, reps: Int, weight: Double) {
         _state.update {
             val updated = it.exercises.toMutableList()
@@ -290,6 +313,7 @@ class CreateWorkoutViewModel : ViewModel() {
         }
     }
 
+    // Marks a set as a warm-up or a working set
     fun onToggleWarmup(exerciseIndex: Int, setIndex: Int) {
         _state.update { currentState ->
             val updatedExercises = currentState.exercises.toMutableList()
@@ -302,6 +326,7 @@ class CreateWorkoutViewModel : ViewModel() {
         }
     }
 
+    // Marks a set complete or incomplete, fills missing previous values, and advances to the next set
     fun onToggleCheck(exerciseIndex: Int, setIndex: Int) {
         _state.update { currentState ->
             val updatedExercises = currentState.exercises.toMutableList()
@@ -352,8 +377,10 @@ class CreateWorkoutViewModel : ViewModel() {
         }
     }
 
+    // Validates and saves the workout with its working sets, duration, and total volume
     fun onFinishWorkout() {
         val currentState = _state.value
+        if (currentState.isLoading || currentState.saveSuccess) return
 
         if (currentState.exercises.isEmpty()) {
             _state.update { it.copy(error = "Add at least one exercise") }
@@ -370,8 +397,17 @@ class CreateWorkoutViewModel : ViewModel() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null, isTimerRunning = false) }
 
-            val uid = authRepository.getCurrentUserId()!!
-            val user = userRepository.getUserProfile(uid).getOrThrow()
+            val uid = authRepository.getCurrentUserId()
+            if (uid == null) {
+                _state.update { it.copy(isLoading = false, error = "Usuario no autenticado") }
+                return@launch
+            }
+            val userResult = userRepository.getUserProfile(uid)
+            val user = userResult.getOrNull()
+            if (user == null) {
+                _state.update { it.copy(isLoading = false, error = userResult.exceptionOrNull()?.message ?: "No se pudo cargar el perfil") }
+                return@launch
+            }
 
             val workingExercises = currentState.exercises.map { exercise ->
                 val ghostSets = currentState.previousSetsByExercise[exercise.exerciseName]
@@ -422,16 +458,19 @@ class CreateWorkoutViewModel : ViewModel() {
         }
     }
 
+    // Clears the workout saved confirmation flag
     fun onSaveHandled() {
         _state.update { it.copy(saveSuccess = false) }
     }
 
+    // Stops the timer and resets the workout with a discard confirmation
     fun onDiscardWorkout() {
         timerJob?.cancel()
         timerJob = null
         _state.value = CreateWorkoutUiState(discardSuccess = true)
     }
 
+    // Clears the workout discarded confirmation flag
     fun onDiscardHandled() {
         _state.update { it.copy(discardSuccess = false) }
     }

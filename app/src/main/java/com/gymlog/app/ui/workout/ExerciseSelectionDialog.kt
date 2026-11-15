@@ -54,7 +54,6 @@ fun ExerciseSelectionDialog(
         matchesSearch && matchesMuscleGroup
     }
 
-    // Extract unique muscle groups for the filter chips
     val muscleGroups = exercises.map { it.muscleGroup }.distinct().sorted()
 
     AlertDialog(
@@ -63,7 +62,6 @@ fun ExerciseSelectionDialog(
         text = {
             Column(modifier = Modifier.fillMaxWidth()) {
 
-                // Custom Search Bar
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -127,7 +125,6 @@ fun ExerciseSelectionDialog(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Muscle Group Filters
                 LazyRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
@@ -149,7 +146,6 @@ fun ExerciseSelectionDialog(
 
                 Spacer(modifier = Modifier.height(4.dp))
 
-                // Loading or List
                 if (isLoading) {
                     Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
                         CircularProgressIndicator()

@@ -1,3 +1,4 @@
+
 package com.gymlog.app.ui.workout
 
 import androidx.lifecycle.ViewModel
@@ -13,6 +14,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+// Represents the current state of the workout detail screen
 data class WorkoutDetailUiState(
     val workout: Workout? = null,
     val isLoading: Boolean = true,
@@ -23,6 +25,7 @@ data class WorkoutDetailUiState(
     val weightUnit: String = "kg"
 )
 
+// Manages workout details
 class WorkoutDetailViewModel : ViewModel() {
 
     private val workoutRepository = WorkoutRepository()
@@ -32,6 +35,8 @@ class WorkoutDetailViewModel : ViewModel() {
     private val _state = MutableStateFlow(WorkoutDetailUiState())
     val state: StateFlow<WorkoutDetailUiState> = _state.asStateFlow()
 
+    // Observes the current user's weight unit
+    // and updates the screen when the preference changes
     private fun observeWeightUnit() {
         viewModelScope.launch {
             val uid = authRepository.getCurrentUserId() ?: return@launch
@@ -41,6 +46,8 @@ class WorkoutDetailViewModel : ViewModel() {
         }
     }
 
+    // Loads a workout by its ID and updates the screen
+    // with its details or an error if loading fails
     fun loadWorkout(workoutId: String) {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
@@ -68,20 +75,37 @@ class WorkoutDetailViewModel : ViewModel() {
         }
     }
 
+    // Deletes a workout only if it belongs to the current user
+    // and updates the deletion status after the request
     fun deleteWorkout(workoutId: String) {
+        if (_state.value.isDeleting) return
+
+        val uid = authRepository.getCurrentUserId()
+        if (uid == null || _state.value.workout?.id != workoutId || _state.value.workout?.userId != uid) {
+            _state.update {
+                it.copy(deleteError = "No puedes eliminar este entrenamiento")
+            }
+            return
+        }
+
         viewModelScope.launch {
             _state.update { it.copy(isDeleting = true, deleteError = null) }
 
             workoutRepository.deleteWorkout(workoutId)
                 .onSuccess {
-                    _state.update { it.copy(isDeleting = false, deleteSuccess = true) }
+                    _state.update {
+                        it.copy(isDeleting = false, deleteSuccess = true)
+                    }
                 }
                 .onFailure { e ->
-                    _state.update { it.copy(isDeleting = false, deleteError = e.message) }
+                    _state.update {
+                        it.copy(isDeleting = false, deleteError = e.message)
+                    }
                 }
         }
     }
 
+    // Resets the deletion success flag after the screen handles it
     fun onDeleteHandled() {
         _state.update { it.copy(deleteSuccess = false) }
     }

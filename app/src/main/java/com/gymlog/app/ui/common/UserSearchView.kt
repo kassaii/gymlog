@@ -204,11 +204,7 @@ private fun UserSearchItem(
                 style = MaterialTheme.typography.titleMedium,
                 fontWeight = FontWeight.Bold
             )
-            Text(
-                text = if (user.followersCount == 1) "1 seguidor" else "${user.followersCount} seguidores",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
+            // Follower counts are loaded on the profile, not in every search result.
         }
         if (isFollowing) {
             Surface(

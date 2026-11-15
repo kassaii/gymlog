@@ -85,7 +85,7 @@ fun LoginScreen(
 
         Spacer(modifier = Modifier.height(8.dp))
 
-        // Provisional (eliminar más adelante)
+        // Temporal
         OutlinedButton(
             onClick = {
                 viewModel.onEmailChange("test4@gymlog.com")
@@ -96,6 +96,30 @@ fun LoginScreen(
             modifier = Modifier.fillMaxWidth()
         ) {
             Text("Iniciar sesión como test4")
+        }
+
+        OutlinedButton(
+            onClick = {
+                viewModel.onEmailChange("test2@gymlog.com")
+                viewModel.onPasswordChange("test123")
+                viewModel.onLoginClicked()
+            },
+            enabled = !state.isLoading,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Iniciar sesión como test2")
+        }
+
+        OutlinedButton(
+            onClick = {
+                viewModel.onEmailChange("test1@gymlog.com")
+                viewModel.onPasswordChange("test123")
+                viewModel.onLoginClicked()
+            },
+            enabled = !state.isLoading,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text("Iniciar sesión como test1")
         }
 
         if (state.isLoading) {

@@ -1,3 +1,4 @@
+
 package com.gymlog.app.ui.profile
 
 import androidx.lifecycle.ViewModel
@@ -14,6 +15,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+// Represents the current state of the profile screen
 data class ProfileUiState(
     val user: User? = null,
     val workouts: List<Workout> = emptyList(),
@@ -21,6 +23,7 @@ data class ProfileUiState(
     val error: String? = null
 )
 
+// Manages the current user's profile and workout history
 class ProfileViewModel : ViewModel() {
 
     private val authRepository = AuthRepository()
@@ -34,17 +37,20 @@ class ProfileViewModel : ViewModel() {
         observeProfile()
     }
 
+    // Observes the current user's profile and workouts in real time
+    // and updates the screen whenever their data changes
     private fun observeProfile() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
 
             val uid = authRepository.getCurrentUserId()
             if (uid == null) {
-                _state.update { it.copy(isLoading = false, error = "Usuario no autenticado") }
+                _state.update {
+                    it.copy(isLoading = false, error = "Usuario no autenticado")
+                }
                 return@launch
             }
 
-            // Observe workouts in real time
             workoutRepository.observeWorkoutsByUserId(uid).collectLatest { workouts ->
                 _state.update { it.copy(workouts = workouts) }
             }
@@ -53,7 +59,6 @@ class ProfileViewModel : ViewModel() {
         viewModelScope.launch {
             val uid = authRepository.getCurrentUserId() ?: return@launch
 
-            // Observe user profile in real time
             userRepository.observeUserProfile(uid).collectLatest { user ->
                 if (user != null) {
                     _state.update {
@@ -63,7 +68,9 @@ class ProfileViewModel : ViewModel() {
                         )
                     }
                 } else {
-                    _state.update { it.copy(isLoading = false, error = "Perfil no encontrado") }
+                    _state.update {
+                        it.copy(isLoading = false, error = "Perfil no encontrado")
+                    }
                 }
             }
         }

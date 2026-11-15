@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.google.firebase.auth.FirebaseAuth
 import com.gymlog.app.data.model.ExerciseSet
 import com.gymlog.app.data.model.WorkoutExercise
 import com.gymlog.app.ui.theme.LocalWorkoutColors
@@ -85,12 +86,17 @@ fun WorkoutDetailScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = { showDeleteDialog = true }) {
-                        Icon(
-                            imageVector = Icons.Default.Delete,
-                            contentDescription = "Eliminar entrenamiento",
-                            tint = MaterialTheme.colorScheme.error
-                        )
+                    val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
+                    val workout = state.workout
+
+                    if (workout != null && workout.userId == currentUserId) {
+                        IconButton(onClick = { showDeleteDialog = true }) {
+                            Icon(
+                                imageVector = Icons.Default.Delete,
+                                contentDescription = "Eliminar entrenamiento",
+                                tint = MaterialTheme.colorScheme.error
+                            )
+                        }
                     }
                 }
             )
@@ -203,7 +209,10 @@ fun WorkoutDetailScreen(
         }
     }
 
-    if (showDeleteDialog) {
+    if (
+        showDeleteDialog &&
+        state.workout?.userId == FirebaseAuth.getInstance().currentUser?.uid
+    ) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
             title = { Text("Eliminar entrenamiento") },

@@ -1,3 +1,4 @@
+
 package com.gymlog.app.ui.settings
 
 import androidx.lifecycle.ViewModel
@@ -11,6 +12,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+// Represents the current state of the settings screen
 data class SettingsUiState(
     val user: User? = null,
     val isLoading: Boolean = true,
@@ -25,6 +27,7 @@ data class SettingsUiState(
     val updateSuccess: Boolean = false
 )
 
+// Manages account settings and user preferences
 class SettingsViewModel : ViewModel() {
 
     private val authRepository = AuthRepository()
@@ -37,14 +40,20 @@ class SettingsViewModel : ViewModel() {
         loadUser()
     }
 
+    // Loads the current user's profile from the repository
+    // and updates the settings screen with the result
     private fun loadUser() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true) }
+
             val uid = authRepository.getCurrentUserId()
             if (uid == null) {
-                _state.update { it.copy(isLoading = false, error = "Usuario no autenticado") }
+                _state.update {
+                    it.copy(isLoading = false, error = "Usuario no autenticado")
+                }
                 return@launch
             }
+
             userRepository.getUserProfile(uid).fold(
                 onSuccess = { user ->
                     _state.update { it.copy(user = user, isLoading = false) }
@@ -56,6 +65,8 @@ class SettingsViewModel : ViewModel() {
         }
     }
 
+    // Opens or closes the username dialog
+    // and prepares the username field for editing
     fun onShowUsernameDialog(show: Boolean) {
         _state.update {
             it.copy(
@@ -66,6 +77,8 @@ class SettingsViewModel : ViewModel() {
         }
     }
 
+    // Opens or closes the password dialog
+    // and clears the password fields and previous errors
     fun onShowPasswordDialog(show: Boolean) {
         _state.update {
             it.copy(
@@ -78,43 +91,68 @@ class SettingsViewModel : ViewModel() {
         }
     }
 
+    // Updates the new username entered by the user
     fun onNewUsernameChange(username: String) {
         _state.update { it.copy(newUsername = username) }
     }
 
+    // Updates the current password entered by the user
     fun onCurrentPasswordChange(password: String) {
         _state.update { it.copy(currentPassword = password) }
     }
 
+    // Updates the new password entered by the user
     fun onNewPasswordChange(password: String) {
         _state.update { it.copy(newPassword = password) }
     }
 
+    // Updates the password confirmation entered by the user
     fun onConfirmPasswordChange(password: String) {
         _state.update { it.copy(confirmPassword = password) }
     }
 
+    // Updates the username in the repository
+    // and reloads the user profile when the change succeeds
     fun updateUsername() {
         val newUsername = _state.value.newUsername.trim()
-        if (newUsername.isEmpty()) return
+        if (newUsername.isEmpty() || _state.value.isUpdating) return
 
         viewModelScope.launch {
             _state.update { it.copy(isUpdating = true, error = null) }
-            val uid = authRepository.getCurrentUserId() ?: return@launch
+
+            val uid = authRepository.getCurrentUserId()
+            if (uid == null) {
+                _state.update {
+                    it.copy(isUpdating = false, error = "Usuario no autenticado")
+                }
+                return@launch
+            }
 
             userRepository.updateUsername(uid, newUsername).fold(
                 onSuccess = {
-                    _state.update { it.copy(isUpdating = false, showUsernameDialog = false, updateSuccess = true) }
+                    _state.update {
+                        it.copy(
+                            isUpdating = false,
+                            showUsernameDialog = false,
+                            updateSuccess = true
+                        )
+                    }
                     loadUser()
                 },
                 onFailure = { e ->
-                    _state.update { it.copy(isUpdating = false, error = e.message) }
+                    _state.update {
+                        it.copy(isUpdating = false, error = e.message)
+                    }
                 }
             )
         }
     }
 
+    // Validates the password fields and updates the user's password
+    // after confirming their current credentials
     fun updatePassword() {
+        if (_state.value.isUpdating) return
+
         val currentPassword = _state.value.currentPassword
         val newPassword = _state.value.newPassword
         val confirmPassword = _state.value.confirmPassword
@@ -125,18 +163,26 @@ class SettingsViewModel : ViewModel() {
         }
 
         if (newPassword.length < 6) {
-            _state.update { it.copy(error = "La nueva contraseña debe tener al menos 6 caracteres") }
+            _state.update {
+                it.copy(error = "La nueva contraseña debe tener al menos 6 caracteres")
+            }
             return
         }
 
         if (newPassword != confirmPassword) {
-            _state.update { it.copy(error = "Las contraseñas nuevas no coinciden") }
+            _state.update {
+                it.copy(error = "Las contraseñas nuevas no coinciden")
+            }
             return
         }
 
         viewModelScope.launch {
             _state.update { it.copy(isUpdating = true, error = null) }
-            authRepository.updatePasswordWithReauth(currentPassword, newPassword).fold(
+
+            authRepository.updatePasswordWithReauth(
+                currentPassword,
+                newPassword
+            ).fold(
                 onSuccess = {
                     _state.update {
                         it.copy(
@@ -150,12 +196,16 @@ class SettingsViewModel : ViewModel() {
                     }
                 },
                 onFailure = { e ->
-                    _state.update { it.copy(isUpdating = false, error = e.message) }
+                    _state.update {
+                        it.copy(isUpdating = false, error = e.message)
+                    }
                 }
             )
         }
     }
 
+    // Saves the selected weight unit in the repository
+    // and updates the user's settings when the change succeeds
     fun updateWeightUnit(useLbs: Boolean) {
         val uid = authRepository.getCurrentUserId() ?: return
         val newUnit = if (useLbs) "lbs" else "kg"
@@ -163,16 +213,14 @@ class SettingsViewModel : ViewModel() {
         viewModelScope.launch {
             userRepository.updateWeightUnit(uid, newUnit).fold(
                 onSuccess = {
-                    _state.update { it.copy(user = it.user?.copy(weightUnit = newUnit)) }
+                    _state.update {
+                        it.copy(user = it.user?.copy(weightUnit = newUnit))
+                    }
                 },
                 onFailure = { e ->
                     _state.update { it.copy(error = e.message) }
                 }
             )
         }
-    }
-
-    fun onUpdateHandled() {
-        _state.update { it.copy(updateSuccess = false) }
     }
 }

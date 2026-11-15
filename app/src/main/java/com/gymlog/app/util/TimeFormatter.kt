@@ -1,7 +1,7 @@
 package com.gymlog.app.util
 
-// Converts an integer (seconds) into the established format
 object TimeFormatter {
+    // Converts an integer (seconds) into the established format
     fun formatDuration(seconds: Int): String {
         val hours = seconds / 3600
         val minutes = (seconds % 3600) / 60

@@ -6,8 +6,10 @@ object WeightFormatter {
 
     private const val KG_TO_LB = 2.20462
 
+    // Converts kilograms to pounds
     fun kgToLb(kg: Double): Double = kg * KG_TO_LB
 
+    // Converts pounds to kilograms
     fun lbToKg(lb: Double): Double = lb / KG_TO_LB
 
     // Converts a weight (kg) to the user's unit and formats it

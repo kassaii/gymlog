@@ -1,3 +1,4 @@
+
 package com.gymlog.app.ui.profile
 
 import androidx.lifecycle.ViewModel
@@ -15,6 +16,7 @@ import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+// Represents the current state of another user's profile screen
 data class UserProfileUiState(
     val user: User? = null,
     val workouts: List<Workout> = emptyList(),
@@ -25,6 +27,7 @@ data class UserProfileUiState(
     val error: String? = null
 )
 
+// Manages a user's profile, workout history and follow relationship
 class UserProfileViewModel(
     private val targetUid: String
 ) : ViewModel() {
@@ -40,45 +43,85 @@ class UserProfileViewModel(
         observeProfile()
     }
 
+    // Loads the selected user's workouts and observes their profile
+    // and follow relationship for real-time updates
     private fun observeProfile() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
 
-            val currentUid = authRepository.getCurrentUserId() ?: return@launch
+            val currentUid = authRepository.getCurrentUserId()
 
-            // Load workouts once
-            val workoutsResult = workoutRepository.getWorkoutsByUserId(targetUid)
+            if (currentUid == null) {
+                _state.update {
+                    it.copy(
+                        isLoading = false,
+                        error = "Usuario no autenticado"
+                    )
+                }
+                return@launch
+            }
 
-            // Observe target profile
-            userRepository.observeUserProfile(targetUid).collectLatest { user ->
-                // Observe current user to know if following
-                userRepository.observeUserProfile(currentUid).collectLatest { currentUser ->
-                    val isFollowing = currentUser?.followingIds?.contains(targetUid) ?: false
-                    val isOwnProfile = currentUid == targetUid
+            workoutRepository.getWorkoutsByUserId(targetUid).fold(
+                onSuccess = { workouts ->
+                    _state.update { it.copy(workouts = workouts) }
+                },
+                onFailure = { e ->
+                    _state.update { it.copy(error = e.message) }
+                }
+            )
 
+            _state.update {
+                it.copy(isOwnProfile = currentUid == targetUid)
+            }
+
+            launch {
+                userRepository.observeUserProfile(targetUid).collectLatest { user ->
                     if (user != null) {
                         _state.update {
                             it.copy(
                                 user = user,
-                                workouts = workoutsResult.getOrDefault(it.workouts),
-                                isFollowing = isFollowing,
-                                isOwnProfile = isOwnProfile,
                                 isLoading = false
                             )
                         }
                     } else {
-                        _state.update { it.copy(isLoading = false, error = "Perfil no encontrado") }
+                        _state.update {
+                            it.copy(
+                                isLoading = false,
+                                error = "Perfil no encontrado"
+                            )
+                        }
+                    }
+                }
+            }
+
+            if (currentUid != targetUid) {
+                launch {
+                    userRepository.observeIsFollowing(
+                        currentUid,
+                        targetUid
+                    ).collectLatest { isFollowing ->
+                        _state.update {
+                            it.copy(isFollowing = isFollowing)
+                        }
                     }
                 }
             }
         }
     }
 
+    // Follows or unfollows the selected user
+    // and updates the loading or error state after the action
     fun toggleFollow() {
         val currentUid = authRepository.getCurrentUserId() ?: return
 
+        if (currentUid == targetUid || _state.value.isFollowLoading) {
+            return
+        }
+
         viewModelScope.launch {
-            _state.update { it.copy(isFollowLoading = true) }
+            _state.update {
+                it.copy(isFollowLoading = true, error = null)
+            }
 
             val result = if (_state.value.isFollowing) {
                 userRepository.unfollowUser(currentUid, targetUid)
@@ -86,18 +129,31 @@ class UserProfileViewModel(
                 userRepository.followUser(currentUid, targetUid)
             }
 
-            result.onSuccess {
-                _state.update { it.copy(isFollowLoading = false) }
-            }.onFailure { e ->
-                _state.update { it.copy(isFollowLoading = false, error = e.message) }
-            }
+            result.fold(
+                onSuccess = {
+                    _state.update {
+                        it.copy(isFollowLoading = false)
+                    }
+                },
+                onFailure = { e ->
+                    _state.update {
+                        it.copy(
+                            isFollowLoading = false,
+                            error = e.message
+                        )
+                    }
+                }
+            )
         }
     }
 }
 
+// Creates UserProfileViewModel instances for a specific user
 class UserProfileViewModelFactory(
     private val userId: String
 ) : ViewModelProvider.Factory {
+
+    // Creates a UserProfileViewModel using the provided user ID
     @Suppress("UNCHECKED_CAST")
     override fun <T : ViewModel> create(modelClass: Class<T>): T {
         return UserProfileViewModel(userId) as T

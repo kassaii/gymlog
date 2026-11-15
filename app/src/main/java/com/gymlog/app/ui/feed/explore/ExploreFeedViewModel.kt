@@ -1,3 +1,4 @@
+
 package com.gymlog.app.ui.feed.explore
 
 import androidx.lifecycle.ViewModel
@@ -17,6 +18,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlin.time.Duration.Companion.milliseconds
 
+// Represents the current state of the explore feed screen
 data class ExploreFeedUiState(
     val workouts: List<Workout> = emptyList(),
     val searchedUsers: List<User> = emptyList(),
@@ -30,6 +32,7 @@ data class ExploreFeedUiState(
     val weightUnit: String = "kg"
 )
 
+// Manages the explore feed, user search and following information
 class ExploreFeedViewModel : ViewModel() {
 
     private val workoutRepository = WorkoutRepository()
@@ -50,18 +53,24 @@ class ExploreFeedViewModel : ViewModel() {
         observeWeightUnit()
     }
 
+    // Observes changes to the user's weight unit
+    // and updates the feed when the unit changes
     private fun observeWeightUnit() {
         viewModelScope.launch {
             val uid = authRepository.getCurrentUserId() ?: return@launch
+
             userRepository.observeWeightUnit(uid).collectLatest { unit ->
                 _state.update { it.copy(weightUnit = unit) }
             }
         }
     }
 
+    // Loads the current user's ID and followed users
+    // to identify which search results are already followed
     private fun loadUserContext() {
         viewModelScope.launch {
             currentUserId = authRepository.getCurrentUserId()
+
             currentUserId?.let { uid ->
                 userRepository.getFollowingIds(uid).onSuccess { ids ->
                     myFollowingIds = ids.toSet()
@@ -71,9 +80,12 @@ class ExploreFeedViewModel : ViewModel() {
         }
     }
 
+    // Loads the most recent workouts from all users
+    // and updates the explore feed with the results
     fun loadFeed() {
         viewModelScope.launch {
             _state.update { it.copy(isLoading = true, error = null) }
+
             workoutRepository.getRecentWorkouts().fold(
                 onSuccess = { workouts ->
                     _state.update { it.copy(workouts = workouts, isLoading = false) }
@@ -85,9 +97,12 @@ class ExploreFeedViewModel : ViewModel() {
         }
     }
 
+    // Refreshes the explore feed by loading the latest workouts
+    // without displaying the initial loading state
     fun onRefresh() {
         viewModelScope.launch {
             _state.update { it.copy(isRefreshing = true) }
+
             workoutRepository.getRecentWorkouts().fold(
                 onSuccess = { workouts ->
                     _state.update { it.copy(workouts = workouts, isRefreshing = false) }
@@ -99,28 +114,45 @@ class ExploreFeedViewModel : ViewModel() {
         }
     }
 
+    // Opens or closes the user search
+    // and clears the search results when closing it
     fun onSearchToggle() {
+        searchJob?.cancel()
+
         _state.update {
             if (it.isSearchActive) {
-                it.copy(isSearchActive = false, searchQuery = "", searchedUsers = emptyList())
+                it.copy(
+                    isSearchActive = false,
+                    searchQuery = "",
+                    searchedUsers = emptyList(),
+                    isSearchingUsers = false
+                )
             } else {
                 it.copy(isSearchActive = true)
             }
         }
     }
 
+    // Searches for users after a short delay to avoid unnecessary requests
+    // and sorts the results by followed users and username
     fun onSearchQueryChange(query: String) {
         _state.update { it.copy(searchQuery = query) }
 
         searchJob?.cancel()
 
         if (query.isBlank()) {
-            _state.update { it.copy(searchedUsers = emptyList(), isSearchingUsers = false) }
+            _state.update {
+                it.copy(
+                    searchedUsers = emptyList(),
+                    isSearchingUsers = false
+                )
+            }
             return
         }
 
         searchJob = viewModelScope.launch {
             delay(300.milliseconds)
+
             _state.update { it.copy(isSearchingUsers = true) }
 
             userRepository.searchUsers(query).fold(
@@ -130,37 +162,37 @@ class ExploreFeedViewModel : ViewModel() {
                     val sortedUsers = filteredUsers.sortedWith(
                         compareByDescending<User> {
                             myFollowingIds.contains(it.uid)
+                        }.thenBy {
+                            it.username.lowercase()
                         }
-                            .thenByDescending {
-                                it.followersCount
-                            }
-                            .thenBy {
-                                it.username.lowercase()
-                            }
                     )
-                    _state.update { it.copy(searchedUsers = sortedUsers, isSearchingUsers = false) }
+
+                    _state.update {
+                        it.copy(
+                            searchedUsers = sortedUsers,
+                            isSearchingUsers = false
+                        )
+                    }
                 },
                 onFailure = { e ->
-                    _state.update { it.copy(error = e.message, isSearchingUsers = false) }
+                    _state.update {
+                        it.copy(
+                            error = e.message,
+                            isSearchingUsers = false
+                        )
+                    }
                 }
             )
         }
     }
 
+    // Runs the current user search again
+    // to update the displayed results
     fun refreshSearchResults() {
         val query = _state.value.searchQuery
+
         if (query.isNotBlank()) {
             onSearchQueryChange(query)
-        }
-    }
-
-    fun refreshFollowingIds() {
-        viewModelScope.launch {
-            val uid = authRepository.getCurrentUserId() ?: return@launch
-            userRepository.getFollowingIds(uid).onSuccess { ids ->
-                myFollowingIds = ids.toSet()
-                _state.update { it.copy(myFollowingIds = myFollowingIds) }
-            }
         }
     }
 }
