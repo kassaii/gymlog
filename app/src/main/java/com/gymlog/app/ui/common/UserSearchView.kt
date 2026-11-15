@@ -1,11 +1,9 @@
 
 package com.gymlog.app.ui.common
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -16,14 +14,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.gymlog.app.data.model.User
 
@@ -38,7 +32,9 @@ fun UserSearchView(
     onUserClick: (String) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(modifier = modifier.fillMaxSize()) {
+    Column(
+        modifier = modifier.fillMaxSize()
+    ) {
         SearchField(
             query = query,
             onQueryChange = onQueryChange,
@@ -78,16 +74,23 @@ fun UserSearchView(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(bottom = 96.dp)
                 ) {
-                    items(users, key = { it.uid }) { user ->
+                    items(
+                        items = users,
+                        key = { it.uid }
+                    ) { user ->
                         UserRow(
                             user = user,
                             isFollowing = followingIds.contains(user.uid),
-                            onClick = { onUserClick(user.uid) }
+                            onClick = {
+                                onUserClick(user.uid)
+                            }
                         )
 
                         HorizontalDivider(
                             modifier = Modifier.padding(horizontal = 16.dp),
-                            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.3f)
+                            color = MaterialTheme.colorScheme.outlineVariant.copy(
+                                alpha = 0.3f
+                            )
                         )
                     }
                 }
@@ -96,7 +99,7 @@ fun UserSearchView(
             isSearching -> Unit
 
             query.isBlank() -> {
-                SearchPlaceholder(
+                EmptyStateView(
                     icon = Icons.Default.PersonSearch,
                     title = "Encuentra a otros atletas",
                     subtitle = "Busca por nombre de usuario para ver sus entrenos"
@@ -104,7 +107,7 @@ fun UserSearchView(
             }
 
             else -> {
-                SearchPlaceholder(
+                EmptyStateView(
                     icon = Icons.Default.SearchOff,
                     title = "Sin resultados",
                     subtitle = "No hay usuarios que coincidan con \"${query.trim()}\""
@@ -120,7 +123,9 @@ private fun SearchField(
     onQueryChange: (String) -> Unit,
     onClose: () -> Unit
 ) {
-    val focusRequester = remember { FocusRequester() }
+    val focusRequester = remember {
+        FocusRequester()
+    }
 
     LaunchedEffect(Unit) {
         focusRequester.requestFocus()
@@ -144,7 +149,9 @@ private fun SearchField(
         trailingIcon = {
             if (query.isNotEmpty()) {
                 IconButton(
-                    onClick = { onQueryChange("") }
+                    onClick = {
+                        onQueryChange("")
+                    }
                 ) {
                     Icon(
                         imageVector = Icons.Default.Close,
@@ -165,53 +172,4 @@ private fun SearchField(
             .padding(horizontal = 16.dp, vertical = 8.dp)
             .focusRequester(focusRequester)
     )
-}
-
-@Composable
-private fun SearchPlaceholder(
-    icon: ImageVector,
-    title: String,
-    subtitle: String
-) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 32.dp, vertical = 48.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Box(
-            modifier = Modifier
-                .size(72.dp)
-                .background(
-                    MaterialTheme.colorScheme.surfaceVariant,
-                    CircleShape
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(36.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        Spacer(modifier = Modifier.height(16.dp))
-
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.SemiBold,
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(4.dp))
-
-        Text(
-            text = subtitle,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
-    }
 }

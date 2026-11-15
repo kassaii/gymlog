@@ -1,6 +1,8 @@
+
 package com.gymlog.app.ui.workout
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,6 +14,7 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.FitnessCenter
 import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.SwapVert
 import androidx.compose.material.icons.filled.Timer
@@ -37,6 +40,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.google.firebase.auth.FirebaseAuth
 import com.gymlog.app.data.model.ExerciseSet
+import com.gymlog.app.data.model.User
 import com.gymlog.app.data.model.WorkoutExercise
 import com.gymlog.app.ui.common.StatCard
 import com.gymlog.app.ui.theme.LocalWorkoutColors
@@ -49,6 +53,7 @@ import com.gymlog.app.util.WeightFormatter
 fun WorkoutDetailScreen(
     workoutId: String,
     onBack: () -> Unit,
+    onUserClick: (String) -> Unit,
     viewModel: WorkoutDetailViewModel = viewModel(key = workoutId)
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
@@ -87,11 +92,17 @@ fun WorkoutDetailScreen(
                     }
                 },
                 actions = {
-                    val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
+                    val currentUserId =
+                        FirebaseAuth.getInstance().currentUser?.uid
                     val workout = state.workout
 
-                    if (workout != null && workout.userId == currentUserId) {
-                        IconButton(onClick = { showDeleteDialog = true }) {
+                    if (
+                        workout != null &&
+                        workout.userId == currentUserId
+                    ) {
+                        IconButton(
+                            onClick = { showDeleteDialog = true }
+                        ) {
                             Icon(
                                 imageVector = Icons.Default.Delete,
                                 contentDescription = "Eliminar entrenamiento",
@@ -132,44 +143,80 @@ fun WorkoutDetailScreen(
 
             state.workout != null -> {
                 val workout = state.workout!!
+
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxSize()
                         .padding(paddingValues)
                         .padding(horizontal = 16.dp),
                     verticalArrangement = Arrangement.spacedBy(16.dp),
-                    contentPadding = PaddingValues(top = 8.dp, bottom = 24.dp)
+                    contentPadding = PaddingValues(
+                        top = 8.dp,
+                        bottom = 24.dp
+                    )
                 ) {
+                    // Workout owner
                     item {
-                        Column(modifier = Modifier.fillMaxWidth()) {
+                        WorkoutOwnerHeader(
+                            owner = state.owner,
+                            onClick = {
+                                onUserClick(workout.userId)
+                            }
+                        )
+                    }
+
+                    // Workout title, description and date
+                    item {
+                        Column(
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
                             Text(
                                 text = workout.title,
                                 style = MaterialTheme.typography.headlineMedium,
                                 fontWeight = FontWeight.ExtraBold,
                                 color = MaterialTheme.colorScheme.onSurface
                             )
+
                             if (workout.description.isNotBlank()) {
-                                Spacer(modifier = Modifier.height(8.dp))
+                                Spacer(
+                                    modifier = Modifier.height(8.dp)
+                                )
+
                                 Text(
                                     text = workout.description,
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
                             }
-                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Spacer(
+                                modifier = Modifier.height(8.dp)
+                            )
+
                             HorizontalDivider(
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                    alpha = 0.1f
+                                ),
                                 thickness = 1.dp
                             )
-                            Spacer(modifier = Modifier.height(8.dp))
+
+                            Spacer(
+                                modifier = Modifier.height(8.dp)
+                            )
+
                             Text(
-                                text = DateFormatter.formatDateTime(workout.date),
+                                text = DateFormatter.formatDateTime(
+                                    workout.date
+                                ),
                                 style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.7f)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                    alpha = 0.7f
+                                )
                             )
                         }
                     }
 
+                    // Workout statistics
                     item {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -181,18 +228,24 @@ fun WorkoutDetailScreen(
                                 label = "Duración",
                                 value = "${workout.durationMinutes} min"
                             )
+
                             StatCard(
                                 modifier = Modifier.weight(1f),
                                 icon = Icons.Default.FitnessCenter,
                                 label = "Volumen",
-                                value = WeightFormatter.formatCompact(workout.totalVolume, state.weightUnit)
+                                value = WeightFormatter.formatCompact(
+                                    workout.totalVolume,
+                                    state.weightUnit
+                                )
                             )
+
                             StatCard(
                                 modifier = Modifier.weight(1f),
                                 icon = Icons.Default.List,
                                 label = "Series",
                                 value = "${workout.totalSets}"
                             )
+
                             StatCard(
                                 modifier = Modifier.weight(1f),
                                 icon = Icons.Default.TrendingUp,
@@ -202,8 +255,12 @@ fun WorkoutDetailScreen(
                         }
                     }
 
+                    // Workout exercises
                     items(workout.exercises) { exercise ->
-                        ReadOnlyWorkoutExerciseCard(exercise = exercise, weightUnit = state.weightUnit)
+                        ReadOnlyWorkoutExerciseCard(
+                            exercise = exercise,
+                            weightUnit = state.weightUnit
+                        )
                     }
                 }
             }
@@ -212,12 +269,21 @@ fun WorkoutDetailScreen(
 
     if (
         showDeleteDialog &&
-        state.workout?.userId == FirebaseAuth.getInstance().currentUser?.uid
+        state.workout?.userId ==
+        FirebaseAuth.getInstance().currentUser?.uid
     ) {
         AlertDialog(
-            onDismissRequest = { showDeleteDialog = false },
-            title = { Text("Eliminar entrenamiento") },
-            text = { Text("¿Estás seguro de que quieres eliminar este entrenamiento? Esta acción no se puede deshacer.") },
+            onDismissRequest = {
+                showDeleteDialog = false
+            },
+            title = {
+                Text("Eliminar entrenamiento")
+            },
+            text = {
+                Text(
+                    "¿Estás seguro de que quieres eliminar este entrenamiento? Esta acción no se puede deshacer."
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -225,11 +291,18 @@ fun WorkoutDetailScreen(
                         viewModel.deleteWorkout(workoutId)
                     }
                 ) {
-                    Text("Eliminar", color = MaterialTheme.colorScheme.error)
+                    Text(
+                        "Eliminar",
+                        color = MaterialTheme.colorScheme.error
+                    )
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteDialog = false }) {
+                TextButton(
+                    onClick = {
+                        showDeleteDialog = false
+                    }
+                ) {
                     Text("Cancelar")
                 }
             }
@@ -237,14 +310,75 @@ fun WorkoutDetailScreen(
     }
 }
 
+
 @Composable
-private fun ReadOnlyWorkoutExerciseCard(exercise: WorkoutExercise, weightUnit: String) {
+private fun WorkoutOwnerHeader(
+    owner: User?,
+    onClick: () -> Unit
+) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(
+                enabled = owner != null,
+                onClick = onClick
+            )
+            .padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Box(
+            modifier = Modifier
+                .size(48.dp)
+                .clip(CircleShape)
+                .background(MaterialTheme.colorScheme.surfaceVariant),
+            contentAlignment = Alignment.Center
+        ) {
+            if (!owner?.photoUrl.isNullOrBlank()) {
+                AsyncImage(
+                    model = owner.photoUrl,
+                    contentDescription = "Foto de ${owner.username}",
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            } else {
+                Icon(
+                    imageVector = Icons.Default.Person,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                    modifier = Modifier.size(26.dp)
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.width(12.dp))
+
+        Text(
+            text = owner?.username ?: "Usuario",
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis
+        )
+    }
+}
+
+
+@Composable
+private fun ReadOnlyWorkoutExerciseCard(
+    exercise: WorkoutExercise,
+    weightUnit: String
+) {
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(20.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant)
+        colors = CardDefaults.cardColors(
+            containerColor = MaterialTheme.colorScheme.surfaceVariant
+        )
     ) {
-        Column(modifier = Modifier.padding(16.dp)) {
+        Column(
+            modifier = Modifier.padding(16.dp)
+        ) {
             Row(
                 verticalAlignment = Alignment.CenterVertically,
                 modifier = Modifier.fillMaxWidth()
@@ -258,8 +392,12 @@ private fun ReadOnlyWorkoutExerciseCard(exercise: WorkoutExercise, weightUnit: S
                         .clip(CircleShape)
                         .background(MaterialTheme.colorScheme.surface)
                 )
+
                 Spacer(modifier = Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
+
+                Column(
+                    modifier = Modifier.weight(1f)
+                ) {
                     Text(
                         text = exercise.exerciseName,
                         style = MaterialTheme.typography.titleMedium,
@@ -267,8 +405,11 @@ private fun ReadOnlyWorkoutExerciseCard(exercise: WorkoutExercise, weightUnit: S
                         maxLines = 2,
                         overflow = TextOverflow.Ellipsis
                     )
+
                     Text(
-                        text = exercise.muscleGroup.ifEmpty { "Exercise" },
+                        text = exercise.muscleGroup.ifEmpty {
+                            "Exercise"
+                        },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
@@ -283,13 +424,34 @@ private fun ReadOnlyWorkoutExerciseCard(exercise: WorkoutExercise, weightUnit: S
                     .padding(horizontal = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                HeaderCell("SERIE", Modifier.width(44.dp))
+                HeaderCell(
+                    "SERIE",
+                    Modifier.width(44.dp)
+                )
+
                 Spacer(modifier = Modifier.width(6.dp))
-                HeaderCell(weightUnit.uppercase(), Modifier.weight(1f), icon = Icons.Default.FitnessCenter)
+
+                HeaderCell(
+                    weightUnit.uppercase(),
+                    Modifier.weight(1f),
+                    icon = Icons.Default.FitnessCenter
+                )
+
                 Spacer(modifier = Modifier.width(6.dp))
-                HeaderCell("REPS", Modifier.weight(1f), icon = Icons.Default.Repeat)
+
+                HeaderCell(
+                    "REPS",
+                    Modifier.weight(1f),
+                    icon = Icons.Default.Repeat
+                )
+
                 Spacer(modifier = Modifier.width(6.dp))
-                HeaderCell("PROG.", Modifier.weight(1.2f), icon = Icons.Default.TrendingUp)
+
+                HeaderCell(
+                    "PROG.",
+                    Modifier.weight(1.2f),
+                    icon = Icons.Default.TrendingUp
+                )
             }
 
             Spacer(modifier = Modifier.height(8.dp))
@@ -299,7 +461,11 @@ private fun ReadOnlyWorkoutExerciseCard(exercise: WorkoutExercise, weightUnit: S
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
                 exercise.sets.forEachIndexed { index, set ->
-                    ReadOnlySetRow(label = "${index + 1}", set = set, weightUnit = weightUnit)
+                    ReadOnlySetRow(
+                        label = "${index + 1}",
+                        set = set,
+                        weightUnit = weightUnit
+                    )
                 }
             }
         }
@@ -307,9 +473,18 @@ private fun ReadOnlyWorkoutExerciseCard(exercise: WorkoutExercise, weightUnit: S
 }
 
 @Composable
-private fun ReadOnlySetRow(label: String, set: ExerciseSet, weightUnit: String) {
+private fun ReadOnlySetRow(
+    label: String,
+    set: ExerciseSet,
+    weightUnit: String
+) {
     val workoutColors = LocalWorkoutColors.current
-    val displayWeight = if (weightUnit == "kg") set.weight else WeightFormatter.kgToLb(set.weight)
+
+    val displayWeight = if (weightUnit == "kg") {
+        set.weight
+    } else {
+        WeightFormatter.kgToLb(set.weight)
+    }
 
     Row(
         verticalAlignment = Alignment.CenterVertically,
@@ -329,9 +504,14 @@ private fun ReadOnlySetRow(label: String, set: ExerciseSet, weightUnit: String) 
                     .clip(RoundedCornerShape(8.dp))
                     .background(
                         when {
-                            set.isWarmup -> workoutColors.warmup.copy(alpha = 0.2f)
-                            set.isCompleted -> MaterialTheme.colorScheme.surface
-                            else -> MaterialTheme.colorScheme.secondaryContainer
+                            set.isWarmup ->
+                                workoutColors.warmup.copy(alpha = 0.2f)
+
+                            set.isCompleted ->
+                                MaterialTheme.colorScheme.surface
+
+                            else ->
+                                MaterialTheme.colorScheme.secondaryContainer
                         }
                     ),
                 contentAlignment = Alignment.Center
@@ -340,7 +520,11 @@ private fun ReadOnlySetRow(label: String, set: ExerciseSet, weightUnit: String) 
                     Icon(
                         imageVector = Icons.Default.Check,
                         contentDescription = null,
-                        tint = if (set.isWarmup) workoutColors.warmup else workoutColors.up,
+                        tint = if (set.isWarmup) {
+                            workoutColors.warmup
+                        } else {
+                            workoutColors.up
+                        },
                         modifier = Modifier.size(18.dp)
                     )
                 } else {
@@ -348,7 +532,11 @@ private fun ReadOnlySetRow(label: String, set: ExerciseSet, weightUnit: String) 
                         text = label,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
-                        color = if (set.isWarmup) workoutColors.warmup else MaterialTheme.colorScheme.onSurface
+                        color = if (set.isWarmup) {
+                            workoutColors.warmup
+                        } else {
+                            MaterialTheme.colorScheme.onSurface
+                        }
                     )
                 }
             }
@@ -364,7 +552,11 @@ private fun ReadOnlySetRow(label: String, set: ExerciseSet, weightUnit: String) 
                 text = NumberFormatter.toDisplay(displayWeight),
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = if (set.isWarmup) workoutColors.warmup else MaterialTheme.colorScheme.onSurface
+                color = if (set.isWarmup) {
+                    workoutColors.warmup
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                }
             )
         }
 
@@ -378,7 +570,11 @@ private fun ReadOnlySetRow(label: String, set: ExerciseSet, weightUnit: String) 
                 text = "× ${set.reps}",
                 style = MaterialTheme.typography.titleLarge,
                 fontWeight = FontWeight.Bold,
-                color = if (set.isWarmup) workoutColors.warmup else MaterialTheme.colorScheme.onSurface
+                color = if (set.isWarmup) {
+                    workoutColors.warmup
+                } else {
+                    MaterialTheme.colorScheme.onSurface
+                }
             )
         }
 
@@ -392,62 +588,111 @@ private fun ReadOnlySetRow(label: String, set: ExerciseSet, weightUnit: String) 
             val repsDiff = set.repsProgressDiff ?: 0
 
             if (weightDiffKg != 0.0 || repsDiff != 0) {
-                val isMixedSignal = weightDiffKg < -0.001 && repsDiff > 0
+                val isMixedSignal =
+                    weightDiffKg < -0.001 && repsDiff > 0
 
                 val progressText = when {
-                    isMixedSignal -> "${WeightFormatter.formatDiff(weightDiffKg, weightUnit)} / +$repsDiff"
-                    weightDiffKg > 0.001 -> "+${WeightFormatter.formatDiff(weightDiffKg, weightUnit)} $weightUnit"
-                    weightDiffKg < -0.001 -> "${WeightFormatter.formatDiff(weightDiffKg, weightUnit)} $weightUnit"
-                    repsDiff > 0 -> if (repsDiff == 1) "+1 rep" else "+$repsDiff reps"
+                    isMixedSignal ->
+                        "${WeightFormatter.formatDiff(weightDiffKg, weightUnit)} / +$repsDiff"
+
+                    weightDiffKg > 0.001 ->
+                        "+${WeightFormatter.formatDiff(weightDiffKg, weightUnit)} $weightUnit"
+
+                    weightDiffKg < -0.001 ->
+                        "${WeightFormatter.formatDiff(weightDiffKg, weightUnit)} $weightUnit"
+
+                    repsDiff > 0 ->
+                        if (repsDiff == 1) {
+                            "+1 rep"
+                        } else {
+                            "+$repsDiff reps"
+                        }
+
                     repsDiff < 0 -> {
                         val absReps = kotlin.math.abs(repsDiff)
-                        if (absReps == 1) "-1 rep" else "-$absReps reps"
+
+                        if (absReps == 1) {
+                            "-1 rep"
+                        } else {
+                            "-$absReps reps"
+                        }
                     }
+
                     else -> "-"
                 }
 
                 val progressTextColor = when {
-                    weightDiffKg > 0.001 -> workoutColors.up
-                    weightDiffKg == 0.0 && repsDiff > 0 -> workoutColors.up
-                    weightDiffKg < -0.001 && repsDiff > 0 -> MaterialTheme.colorScheme.onSurfaceVariant
-                    weightDiffKg < -0.001 -> workoutColors.down
-                    weightDiffKg == 0.0 && repsDiff < 0 -> workoutColors.down
-                    else -> MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    weightDiffKg > 0.001 ->
+                        workoutColors.up
+
+                    weightDiffKg == 0.0 && repsDiff > 0 ->
+                        workoutColors.up
+
+                    weightDiffKg < -0.001 && repsDiff > 0 ->
+                        MaterialTheme.colorScheme.onSurfaceVariant
+
+                    weightDiffKg < -0.001 ->
+                        workoutColors.down
+
+                    weightDiffKg == 0.0 && repsDiff < 0 ->
+                        workoutColors.down
+
+                    else ->
+                        MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                            alpha = 0.5f
+                        )
                 }
 
                 val progressBackground = when {
-                    weightDiffKg > 0.001 -> workoutColors.upBackground
-                    weightDiffKg == 0.0 && repsDiff > 0 -> workoutColors.upBackground
-                    weightDiffKg < -0.001 && repsDiff > 0 -> MaterialTheme.colorScheme.surfaceVariant
-                    weightDiffKg < -0.001 -> workoutColors.downBackground
-                    weightDiffKg == 0.0 && repsDiff < 0 -> workoutColors.downBackground
-                    else -> MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.8f)
+                    weightDiffKg > 0.001 ->
+                        workoutColors.upBackground
+
+                    weightDiffKg == 0.0 && repsDiff > 0 ->
+                        workoutColors.upBackground
+
+                    weightDiffKg < -0.001 && repsDiff > 0 ->
+                        MaterialTheme.colorScheme.surfaceVariant
+
+                    weightDiffKg < -0.001 ->
+                        workoutColors.downBackground
+
+                    weightDiffKg == 0.0 && repsDiff < 0 ->
+                        workoutColors.downBackground
+
+                    else ->
+                        MaterialTheme.colorScheme.surfaceVariant.copy(
+                            alpha = 0.8f
+                        )
                 }
 
                 Row(
                     modifier = Modifier
                         .clip(RoundedCornerShape(8.dp))
                         .background(progressBackground)
-                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                        .padding(
+                            horizontal = 8.dp,
+                            vertical = 4.dp
+                        ),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    if (isMixedSignal) {
-                        Icon(
-                            imageVector = Icons.Default.SwapVert,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = progressTextColor
-                        )
-                        Spacer(modifier = Modifier.width(3.dp))
-                    } else {
-                        Icon(
-                            imageVector = if (weightDiffKg > 0.001 || repsDiff > 0) Icons.Default.TrendingUp else Icons.Default.TrendingDown,
-                            contentDescription = null,
-                            modifier = Modifier.size(16.dp),
-                            tint = progressTextColor
-                        )
-                        Spacer(modifier = Modifier.width(3.dp))
-                    }
+                    Icon(
+                        imageVector = if (isMixedSignal) {
+                            Icons.Default.SwapVert
+                        } else if (
+                            weightDiffKg > 0.001 ||
+                            repsDiff > 0
+                        ) {
+                            Icons.Default.TrendingUp
+                        } else {
+                            Icons.Default.TrendingDown
+                        },
+                        contentDescription = null,
+                        modifier = Modifier.size(16.dp),
+                        tint = progressTextColor
+                    )
+
+                    Spacer(modifier = Modifier.width(3.dp))
+
                     Text(
                         text = progressText,
                         style = MaterialTheme.typography.labelMedium,
@@ -461,7 +706,9 @@ private fun ReadOnlySetRow(label: String, set: ExerciseSet, weightUnit: String) 
                 Text(
                     text = "-",
                     style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.5f)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                        alpha = 0.5f
+                    )
                 )
             }
         }
@@ -486,8 +733,10 @@ private fun HeaderCell(
                 modifier = Modifier.size(14.dp),
                 tint = MaterialTheme.colorScheme.onSurfaceVariant
             )
+
             Spacer(modifier = Modifier.width(2.dp))
         }
+
         Text(
             text = text,
             style = MaterialTheme.typography.labelMedium,

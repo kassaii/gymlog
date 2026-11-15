@@ -1,7 +1,7 @@
+
 package com.gymlog.app.ui.profile
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,10 +19,11 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil.compose.AsyncImage
+import com.gymlog.app.ui.common.EmptyStateView
+import com.gymlog.app.ui.common.ProfileStats
 import com.gymlog.app.ui.common.StatCard
 import com.gymlog.app.ui.common.WorkoutCard
 import com.gymlog.app.util.WeightFormatter
@@ -41,10 +42,15 @@ fun UserProfileScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text(state.user?.username ?: "Perfil") },
+                title = {
+                    Text(state.user?.username ?: "Perfil")
+                },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Volver")
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                            contentDescription = "Volver"
+                        )
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
@@ -55,7 +61,9 @@ fun UserProfileScreen(
     ) { paddingValues ->
         if (state.isLoading) {
             Box(
-                modifier = Modifier.fillMaxSize().padding(paddingValues),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
                 CircularProgressIndicator()
@@ -63,14 +71,28 @@ fun UserProfileScreen(
         } else if (state.user != null) {
             val user = state.user!!
 
-            val totalHours = state.workouts.sumOf { it.durationMinutes } / 60.0
-            val totalVolume = state.workouts.sumOf { it.totalVolume }
-            val totalSets = state.workouts.sumOf { it.totalSets }
+            val totalHours = state.workouts.sumOf {
+                it.durationMinutes
+            } / 60.0
+
+            val totalVolume = state.workouts.sumOf {
+                it.totalVolume
+            }
+
+            val totalSets = state.workouts.sumOf {
+                it.totalSets
+            }
 
             LazyColumn(
-                modifier = Modifier.fillMaxSize().padding(paddingValues).padding(horizontal = 16.dp),
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(paddingValues)
+                    .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp)
+                contentPadding = PaddingValues(
+                    top = 8.dp,
+                    bottom = 16.dp
+                )
             ) {
                 item {
                     Column(
@@ -84,53 +106,61 @@ fun UserProfileScreen(
                             modifier = Modifier
                                 .size(100.dp)
                                 .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.surfaceVariant)
+                                .background(
+                                    MaterialTheme.colorScheme.surfaceVariant
+                                )
                         )
+
                         Spacer(modifier = Modifier.height(12.dp))
+
                         Text(
                             text = user.username,
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold
                         )
+
                         Spacer(modifier = Modifier.height(12.dp))
 
                         if (state.isFollowLoading) {
-                            CircularProgressIndicator(modifier = Modifier.size(24.dp))
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp)
+                            )
                         } else if (!state.isOwnProfile) {
                             Button(
                                 onClick = viewModel::toggleFollow,
                                 colors = ButtonDefaults.buttonColors(
-                                    containerColor = if (state.isFollowing)
+                                    containerColor = if (state.isFollowing) {
                                         MaterialTheme.colorScheme.surfaceVariant
-                                    else
-                                        MaterialTheme.colorScheme.primary,
-                                    contentColor = if (state.isFollowing)
+                                    } else {
+                                        MaterialTheme.colorScheme.primary
+                                    },
+                                    contentColor = if (state.isFollowing) {
                                         MaterialTheme.colorScheme.onSurfaceVariant
-                                    else
+                                    } else {
                                         MaterialTheme.colorScheme.onPrimary
+                                    }
                                 )
                             ) {
-                                Text(if (state.isFollowing) "Dejar de seguir" else "Seguir")
+                                Text(
+                                    if (state.isFollowing) {
+                                        "Dejar de seguir"
+                                    } else {
+                                        "Seguir"
+                                    }
+                                )
                             }
                         }
                     }
                 }
 
                 item {
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clip(MaterialTheme.shapes.medium)
-                            .background(MaterialTheme.colorScheme.surfaceVariant)
-                            .padding(vertical = 12.dp),
-                        horizontalArrangement = Arrangement.SpaceEvenly
-                    ) {
-                        StatItem(value = "${state.workouts.size}", label = "Entrenos", onClick = {})
-                        StatDivider()
-                        StatItem(value = "${user.followersCount}", label = "Seguidores", onClick = onFollowersClick)
-                        StatDivider()
-                        StatItem(value = "${user.followingCount}", label = "Seguidos", onClick = onFollowingClick)
-                    }
+                    ProfileStats(
+                        workoutsCount = state.workouts.size,
+                        followersCount = user.followersCount,
+                        followingCount = user.followingCount,
+                        onFollowersClick = onFollowersClick,
+                        onFollowingClick = onFollowingClick
+                    )
                 }
 
                 item {
@@ -142,14 +172,23 @@ fun UserProfileScreen(
                             modifier = Modifier.weight(1f),
                             icon = Icons.Default.Timer,
                             label = "Horas",
-                            value = if (totalHours < 1) "${(totalHours * 60).toInt()} min" else "${"%.1f".format(totalHours)} h"
+                            value = if (totalHours < 1) {
+                                "${(totalHours * 60).toInt()} min"
+                            } else {
+                                "${"%.1f".format(totalHours)} h"
+                            }
                         )
+
                         StatCard(
                             modifier = Modifier.weight(1f),
                             icon = Icons.Default.FitnessCenter,
                             label = "Volumen",
-                            value = WeightFormatter.formatCompact(totalVolume, state.user!!.weightUnit)
+                            value = WeightFormatter.formatCompact(
+                                totalVolume,
+                                user.weightUnit
+                            )
                         )
+
                         StatCard(
                             modifier = Modifier.weight(1f),
                             icon = Icons.Default.List,
@@ -169,12 +208,10 @@ fun UserProfileScreen(
 
                 if (state.workouts.isEmpty()) {
                     item {
-                        Text(
-                            text = "Este usuario no ha registrado entrenos todavía",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp)
+                        EmptyStateView(
+                            icon = Icons.Default.FitnessCenter,
+                            title = "Sin entrenamientos",
+                            subtitle = "Este usuario todavía no ha registrado ningún entreno"
                         )
                     }
                 } else {
@@ -182,32 +219,13 @@ fun UserProfileScreen(
                         WorkoutCard(
                             workout = workout,
                             weightUnit = user.weightUnit,
-                            onClick = { onWorkoutClick(workout.id) }
+                            onClick = {
+                                onWorkoutClick(workout.id)
+                            }
                         )
                     }
                 }
             }
         }
     }
-}
-
-@Composable
-private fun StatItem(value: String, label: String, onClick: () -> Unit) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .clip(MaterialTheme.shapes.small)
-            .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-    ) {
-        Text(text = value, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        Text(text = label, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-    }
-}
-
-@Composable
-private fun StatDivider() {
-    Box(
-        modifier = Modifier.width(1.dp).height(32.dp).background(MaterialTheme.colorScheme.outlineVariant)
-    )
 }

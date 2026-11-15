@@ -5,7 +5,6 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
@@ -21,10 +20,10 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.google.firebase.auth.FirebaseAuth
+import com.gymlog.app.ui.common.EmptyStateView
 import com.gymlog.app.ui.common.UserRow
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -36,6 +35,8 @@ fun UserListScreen(
     viewModel: UserListViewModel
 ) {
     val state by viewModel.state.collectAsStateWithLifecycle()
+
+    val currentUserId = FirebaseAuth.getInstance().currentUser?.uid
 
     val title = when (listType) {
         UserListType.FOLLOWERS -> "Seguidores"
@@ -49,7 +50,7 @@ fun UserListScreen(
                 title = {
                     Text(
                         text = title,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = androidx.compose.ui.text.font.FontWeight.Bold
                     )
                 },
                 navigationIcon = {
@@ -84,9 +85,30 @@ fun UserListScreen(
                     CircularProgressIndicator()
                 }
             } else if (state.filteredUsers.isEmpty()) {
+                val (icon, emptyTitle, subtitle) = when {
+                    state.searchQuery.isNotBlank() -> Triple(
+                        Icons.Outlined.SearchOff,
+                        "Sin resultados",
+                        "No hay usuarios que coincidan con \"${state.searchQuery.trim()}\""
+                    )
+
+                    listType == UserListType.FOLLOWERS -> Triple(
+                        Icons.Outlined.PeopleOutline,
+                        "Aún no tienes seguidores",
+                        "Cuando alguien te siga, aparecerá en esta lista"
+                    )
+
+                    else -> Triple(
+                        Icons.Outlined.PersonAdd,
+                        "Aún no sigues a nadie",
+                        "Ve a Explorar para encontrar atletas a los que seguir"
+                    )
+                }
+
                 EmptyStateView(
-                    listType = listType,
-                    searchQuery = state.searchQuery
+                    icon = icon,
+                    title = emptyTitle,
+                    subtitle = subtitle
                 )
             } else {
                 LazyColumn(
@@ -99,11 +121,21 @@ fun UserListScreen(
                         val isFollowing =
                             state.currentUserFollowingIds.contains(user.uid)
 
+                        val isCurrentUser = user.uid == currentUserId
+
                         UserRow(
                             user = user,
                             isFollowing = isFollowing,
-                            onClick = { onUserClick(user.uid) },
-                            onToggleFollow = { viewModel.toggleFollow(user.uid) }
+                            onClick = {
+                                onUserClick(user.uid)
+                            },
+                            onToggleFollow = if (isCurrentUser) {
+                                null
+                            } else {
+                                {
+                                    viewModel.toggleFollow(user.uid)
+                                }
+                            }
                         )
 
                         HorizontalDivider(
@@ -173,75 +205,5 @@ private fun SearchBarLocal(
                 )
             }
         }
-    }
-}
-
-@Composable
-private fun EmptyStateView(
-    listType: UserListType,
-    searchQuery: String
-) {
-    val (icon, title, subtitle) = when {
-        searchQuery.isNotBlank() -> Triple(
-            Icons.Outlined.SearchOff,
-            "Sin resultados",
-            "No hay usuarios que coincidan con \"${searchQuery.trim()}\""
-        )
-
-        listType == UserListType.FOLLOWERS -> Triple(
-            Icons.Outlined.PeopleOutline,
-            "Aún no tienes seguidores",
-            "Cuando alguien te siga, aparecerá en esta lista"
-        )
-
-        else -> Triple(
-            Icons.Outlined.PersonAdd,
-            "Aún no sigues a nadie",
-            "Ve a Explorar para encontrar atletas a los que seguir"
-        )
-    }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(horizontal = 32.dp)
-            .padding(top = 64.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Top
-    ) {
-        Box(
-            modifier = Modifier
-                .size(96.dp)
-                .background(
-                    MaterialTheme.colorScheme.surfaceVariant,
-                    CircleShape
-                ),
-            contentAlignment = Alignment.Center
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = null,
-                modifier = Modifier.size(48.dp),
-                tint = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-        }
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Text(
-            text = title,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        Text(
-            text = subtitle,
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
-        )
     }
 }

@@ -1,10 +1,10 @@
+
 package com.gymlog.app.ui.workout
 
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -16,6 +16,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.outlined.SearchOff
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -32,6 +33,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.gymlog.app.data.model.Exercise
+import com.gymlog.app.ui.common.EmptyStateView
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -49,26 +51,41 @@ fun ExerciseSelectionDialog(
 ) {
     // Filter exercises based on search query and muscle group
     val filteredExercises = exercises.filter { exercise ->
-        val matchesSearch = exercise.name.contains(searchQuery, ignoreCase = true)
-        val matchesMuscleGroup = selectedMuscleGroup == null || exercise.muscleGroup == selectedMuscleGroup
+        val matchesSearch = exercise.name.contains(
+            searchQuery,
+            ignoreCase = true
+        )
+        val matchesMuscleGroup =
+            selectedMuscleGroup == null ||
+                    exercise.muscleGroup == selectedMuscleGroup
+
         matchesSearch && matchesMuscleGroup
     }
 
-    val muscleGroups = exercises.map { it.muscleGroup }.distinct().sorted()
+    val muscleGroups = exercises
+        .map { it.muscleGroup }
+        .distinct()
+        .sorted()
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Añadir ejercicios") },
+        title = {
+            Text("Añadir ejercicios")
+        },
         text = {
-            Column(modifier = Modifier.fillMaxWidth()) {
-
+            Column(
+                modifier = Modifier.fillMaxWidth()
+            ) {
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(34.dp),
                     shape = RoundedCornerShape(8.dp),
                     color = MaterialTheme.colorScheme.surfaceVariant,
-                    border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline)
+                    border = BorderStroke(
+                        1.dp,
+                        MaterialTheme.colorScheme.outline
+                    )
                 ) {
                     Row(
                         modifier = Modifier
@@ -81,20 +98,23 @@ fun ExerciseSelectionDialog(
                             contentDescription = "Buscar",
                             tint = MaterialTheme.colorScheme.onSurfaceVariant
                         )
+
                         Spacer(modifier = Modifier.width(8.dp))
 
                         Box(
                             modifier = Modifier.weight(1f),
-                            contentAlignment = Alignment.CenterStart) {
-                                if (searchQuery.isEmpty()) {
-                                    Text(
-                                        text = "Buscar ejercicio",
-                                        style = TextStyle(
-                                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                            fontSize = 15.sp
-                                        )
+                            contentAlignment = Alignment.CenterStart
+                        ) {
+                            if (searchQuery.isEmpty()) {
+                                Text(
+                                    text = "Buscar ejercicio",
+                                    style = TextStyle(
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        fontSize = 15.sp
                                     )
-                                }
+                                )
+                            }
+
                             BasicTextField(
                                 value = searchQuery,
                                 onValueChange = onSearchQueryChange,
@@ -102,7 +122,9 @@ fun ExerciseSelectionDialog(
                                     color = MaterialTheme.colorScheme.onSurface,
                                     fontSize = 15.sp
                                 ),
-                                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                                cursorBrush = SolidColor(
+                                    MaterialTheme.colorScheme.primary
+                                ),
                                 singleLine = true,
                                 modifier = Modifier.fillMaxWidth()
                             )
@@ -110,7 +132,9 @@ fun ExerciseSelectionDialog(
 
                         if (searchQuery.isNotEmpty()) {
                             IconButton(
-                                onClick = { onSearchQueryChange("") },
+                                onClick = {
+                                    onSearchQueryChange("")
+                                },
                                 modifier = Modifier.size(24.dp)
                             ) {
                                 Icon(
@@ -131,15 +155,24 @@ fun ExerciseSelectionDialog(
                     item {
                         FilterChip(
                             selected = selectedMuscleGroup == null,
-                            onClick = { onMuscleGroupSelect(null) },
-                            label = { Text("Todos") }
+                            onClick = {
+                                onMuscleGroupSelect(null)
+                            },
+                            label = {
+                                Text("Todos")
+                            }
                         )
                     }
+
                     items(muscleGroups) { group ->
                         FilterChip(
                             selected = selectedMuscleGroup == group,
-                            onClick = { onMuscleGroupSelect(group) },
-                            label = { Text(group) }
+                            onClick = {
+                                onMuscleGroupSelect(group)
+                            },
+                            label = {
+                                Text(group)
+                            }
                         )
                     }
                 }
@@ -147,12 +180,31 @@ fun ExerciseSelectionDialog(
                 Spacer(modifier = Modifier.height(4.dp))
 
                 if (isLoading) {
-                    Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(200.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
                         CircularProgressIndicator()
                     }
                 } else if (filteredExercises.isEmpty()) {
-                    Box(modifier = Modifier.fillMaxWidth().height(200.dp), contentAlignment = Alignment.Center) {
-                        Text("No se encontraron ejercicios", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(min = 240.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        EmptyStateView(
+                            icon = Icons.Outlined.SearchOff,
+                            title = "Sin resultados",
+                            subtitle = if (searchQuery.isNotBlank()) {
+                                "No se encontraron ejercicios que coincidan con \"${searchQuery.trim()}\""
+                            } else {
+                                "No hay ejercicios disponibles para este filtro"
+                            },
+                            modifier = Modifier.fillMaxWidth()
+                        )
                     }
                 } else {
                     LazyColumn(
@@ -165,22 +217,31 @@ fun ExerciseSelectionDialog(
                             ExerciseSelectionRow(
                                 exercise = exercise,
                                 isSelected = isSelected,
-                                onToggle = { onToggleSelection(exercise.id) }
+                                onToggle = {
+                                    onToggleSelection(exercise.id)
+                                }
                             )
 
                             if (index < filteredExercises.size - 1) {
-                                val isNextSelected = selectedIds.contains(filteredExercises[index + 1].id)
+                                val isNextSelected = selectedIds.contains(
+                                    filteredExercises[index + 1].id
+                                )
 
-                                val dividerColor = if (!isSelected && !isNextSelected) {
-                                    MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
-                                } else {
-                                    Color.Transparent
-                                }
+                                val dividerColor =
+                                    if (!isSelected && !isNextSelected) {
+                                        MaterialTheme.colorScheme.outlineVariant.copy(
+                                            alpha = 0.5f
+                                        )
+                                    } else {
+                                        Color.Transparent
+                                    }
 
                                 HorizontalDivider(
                                     thickness = 1.dp,
                                     color = dividerColor,
-                                    modifier = Modifier.padding(horizontal = 8.dp)
+                                    modifier = Modifier.padding(
+                                        horizontal = 8.dp
+                                    )
                                 )
                             }
                         }
@@ -226,7 +287,9 @@ private fun ExerciseSelectionRow(
             .fillMaxWidth()
             .clip(RoundedCornerShape(8.dp))
             .background(backgroundColor)
-            .clickable { onToggle() }
+            .clickable {
+                onToggle()
+            }
             .padding(horizontal = 8.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically
     ) {
@@ -234,7 +297,9 @@ private fun ExerciseSelectionRow(
             model = exercise.photoUrl,
             contentDescription = exercise.name,
             contentScale = ContentScale.Crop,
-            error = painterResource(id = android.R.drawable.ic_menu_gallery),
+            error = painterResource(
+                id = android.R.drawable.ic_menu_gallery
+            ),
             modifier = Modifier
                 .size(48.dp)
                 .clip(CircleShape)
@@ -243,19 +308,27 @@ private fun ExerciseSelectionRow(
 
         Spacer(modifier = Modifier.width(12.dp))
 
-        Column(modifier = Modifier.weight(1f)) {
+        Column(
+            modifier = Modifier.weight(1f)
+        ) {
             Text(
                 text = exercise.name,
-                style = MaterialTheme.typography.bodyLarge.copy(fontSize = 16.sp),
+                style = MaterialTheme.typography.bodyLarge.copy(
+                    fontSize = 16.sp
+                ),
                 fontWeight = FontWeight.Medium,
                 maxLines = 2,
                 overflow = TextOverflow.Ellipsis,
                 lineHeight = 20.sp
             )
+
             Spacer(modifier = Modifier.height(2.dp))
+
             Text(
                 text = exercise.muscleGroup,
-                style = MaterialTheme.typography.bodySmall.copy(fontSize = 14.sp),
+                style = MaterialTheme.typography.bodySmall.copy(
+                    fontSize = 14.sp
+                ),
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
         }

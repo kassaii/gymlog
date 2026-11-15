@@ -1,7 +1,7 @@
+
 package com.gymlog.app.ui.profile
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,12 +19,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.gymlog.app.data.model.User
+import com.gymlog.app.ui.common.EmptyStateView
+import com.gymlog.app.ui.common.ProfileStats
 import com.gymlog.app.ui.common.StatCard
 import com.gymlog.app.ui.common.WorkoutCard
 import com.gymlog.app.util.WeightFormatter
@@ -82,26 +83,34 @@ fun ProfileScreen(
                     .padding(paddingValues),
                 contentAlignment = Alignment.Center
             ) {
-                Text(text = state.error ?: "Unknown error", color = MaterialTheme.colorScheme.error)
+                Text(
+                    text = state.error ?: "Unknown error",
+                    color = MaterialTheme.colorScheme.error
+                )
             }
         } else if (state.user != null) {
+            val user = state.user!!
+
             LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(paddingValues)
                     .padding(horizontal = 16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
-                contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp)
+                contentPadding = PaddingValues(
+                    top = 8.dp,
+                    bottom = 16.dp
+                )
             ) {
                 item {
-                    ProfileHeader(user = state.user!!)
+                    ProfileHeader(user = user)
                 }
 
                 item {
                     ProfileStats(
                         workoutsCount = state.workouts.size,
-                        followersCount = state.user!!.followersCount,
-                        followingCount = state.user!!.followingCount,
+                        followersCount = user.followersCount,
+                        followingCount = user.followingCount,
                         onFollowersClick = onFollowersClick,
                         onFollowingClick = onFollowingClick
                     )
@@ -116,14 +125,23 @@ fun ProfileScreen(
                             modifier = Modifier.weight(1f),
                             icon = Icons.Default.Timer,
                             label = "Horas",
-                            value = if (totalHours < 1) "${(totalHours * 60).toInt()} min" else "${"%.1f".format(totalHours)} h"
+                            value = if (totalHours < 1) {
+                                "${(totalHours * 60).toInt()} min"
+                            } else {
+                                "${"%.1f".format(totalHours)} h"
+                            }
                         )
+
                         StatCard(
                             modifier = Modifier.weight(1f),
                             icon = Icons.Default.FitnessCenter,
                             label = "Volumen",
-                            value = WeightFormatter.formatCompact(totalVolume, state.user!!.weightUnit)
+                            value = WeightFormatter.formatCompact(
+                                totalVolume,
+                                user.weightUnit
+                            )
                         )
+
                         StatCard(
                             modifier = Modifier.weight(1f),
                             icon = Icons.Default.List,
@@ -143,20 +161,20 @@ fun ProfileScreen(
 
                 if (state.workouts.isEmpty()) {
                     item {
-                        Text(
-                            text = "Todavía no has registrado ningún entreno",
-                            style = MaterialTheme.typography.bodyMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            textAlign = TextAlign.Center,
-                            modifier = Modifier.fillMaxWidth().padding(vertical = 32.dp)
+                        EmptyStateView(
+                            icon = Icons.Default.FitnessCenter,
+                            title = "Aún no tienes entrenamientos",
+                            subtitle = "Los entrenamientos que completes aparecerán aquí"
                         )
                     }
                 } else {
                     items(state.workouts) { workout ->
                         WorkoutCard(
                             workout = workout,
-                            weightUnit = state.user!!.weightUnit,
-                            onClick = { onWorkoutClick(workout.id) }
+                            weightUnit = user.weightUnit,
+                            onClick = {
+                                onWorkoutClick(workout.id)
+                            }
                         )
                     }
                 }
@@ -180,73 +198,21 @@ private fun ProfileHeader(user: User) {
                 .clip(CircleShape)
                 .background(MaterialTheme.colorScheme.surfaceVariant)
         )
+
         Spacer(modifier = Modifier.height(12.dp))
+
         Text(
             text = user.username,
             style = MaterialTheme.typography.headlineSmall,
             fontWeight = FontWeight.Bold
         )
+
         Spacer(modifier = Modifier.height(4.dp))
+
         Text(
             text = user.email,
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
-}
-
-@Composable
-private fun ProfileStats(
-    workoutsCount: Int,
-    followersCount: Int,
-    followingCount: Int,
-    onFollowersClick: () -> Unit,
-    onFollowingClick: () -> Unit
-) {
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.medium)
-            .background(MaterialTheme.colorScheme.surfaceVariant)
-            .padding(vertical = 12.dp),
-        horizontalArrangement = Arrangement.SpaceEvenly
-    ) {
-        StatItem(value = "$workoutsCount", label = "Entrenos", onClick = {})
-        StatDivider()
-        StatItem(value = "$followersCount", label = "Seguidores", onClick = onFollowersClick)
-        StatDivider()
-        StatItem(value = "$followingCount", label = "Seguidos", onClick = onFollowingClick)
-    }
-}
-
-@Composable
-private fun StatItem(value: String, label: String, onClick: () -> Unit) {
-    Column(
-        horizontalAlignment = Alignment.CenterHorizontally,
-        modifier = Modifier
-            .clip(MaterialTheme.shapes.small)
-            .clickable { onClick() }
-            .padding(horizontal = 16.dp, vertical = 8.dp)
-    ) {
-        Text(
-            text = value,
-            style = MaterialTheme.typography.titleLarge,
-            fontWeight = FontWeight.Bold
-        )
-        Text(
-            text = label,
-            style = MaterialTheme.typography.labelSmall,
-            color = MaterialTheme.colorScheme.onSurfaceVariant
-        )
-    }
-}
-
-@Composable
-private fun StatDivider() {
-    Box(
-        modifier = Modifier
-            .width(1.dp)
-            .height(32.dp)
-            .background(MaterialTheme.colorScheme.outlineVariant)
-    )
 }

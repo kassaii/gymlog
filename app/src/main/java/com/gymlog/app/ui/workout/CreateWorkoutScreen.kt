@@ -1,3 +1,4 @@
+
 package com.gymlog.app.ui.workout
 
 import androidx.compose.foundation.layout.*
@@ -19,14 +20,13 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
-import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.gymlog.app.ui.common.EmptyStateView
 import com.gymlog.app.ui.common.StatCard
 import com.gymlog.app.util.TimeFormatter
 import com.gymlog.app.util.WeightFormatter
@@ -129,14 +129,19 @@ fun CreateWorkoutScreen(
                             .height(56.dp),
                         shape = MaterialTheme.shapes.medium
                     ) {
-                        Icon(Icons.Default.Add, contentDescription = null)
+                        Icon(
+                            Icons.Default.Add,
+                            contentDescription = null
+                        )
                         Spacer(modifier = Modifier.width(8.dp))
                         Text(
                             text = "Añadir ejercicio",
                             style = MaterialTheme.typography.titleMedium
                         )
                     }
+
                     Spacer(modifier = Modifier.height(8.dp))
+
                     TextButton(
                         onClick = { showDiscardDialog = true },
                         modifier = Modifier.fillMaxWidth()
@@ -157,7 +162,10 @@ fun CreateWorkoutScreen(
                 .padding(horizontal = 16.dp)
                 .imePadding(),
             verticalArrangement = Arrangement.spacedBy(16.dp),
-            contentPadding = PaddingValues(top = 8.dp, bottom = 16.dp)
+            contentPadding = PaddingValues(
+                top = 8.dp,
+                bottom = 16.dp
+            )
         ) {
             item {
                 Column(modifier = Modifier.fillMaxWidth()) {
@@ -169,9 +177,12 @@ fun CreateWorkoutScreen(
                                 text = "Título del entrenamiento",
                                 style = MaterialTheme.typography.headlineSmall,
                                 fontWeight = FontWeight.Normal,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.3f)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                    alpha = 0.3f
+                                )
                             )
                         }
+
                         BasicTextField(
                             value = state.title,
                             onValueChange = viewModel::onTitleChange,
@@ -179,18 +190,26 @@ fun CreateWorkoutScreen(
                                 color = MaterialTheme.colorScheme.onSurface,
                                 fontWeight = FontWeight.Bold
                             ),
-                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                            cursorBrush = SolidColor(
+                                MaterialTheme.colorScheme.primary
+                            ),
                             modifier = Modifier.fillMaxWidth(),
                             singleLine = true,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
+                            keyboardOptions = KeyboardOptions(
+                                imeAction = ImeAction.Done
+                            )
                         )
                     }
 
                     Spacer(modifier = Modifier.height(8.dp))
+
                     HorizontalDivider(
-                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.1f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                            alpha = 0.1f
+                        ),
                         thickness = 1.dp
                     )
+
                     Spacer(modifier = Modifier.height(8.dp))
 
                     Box(
@@ -202,19 +221,26 @@ fun CreateWorkoutScreen(
                             Text(
                                 text = "Describe cómo te ha ido el entreno...",
                                 style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
+                                color = MaterialTheme.colorScheme.onSurfaceVariant.copy(
+                                    alpha = 0.4f
+                                )
                             )
                         }
+
                         BasicTextField(
                             value = state.description,
                             onValueChange = viewModel::onDescriptionChange,
                             textStyle = MaterialTheme.typography.bodyMedium.copy(
                                 color = MaterialTheme.colorScheme.onSurface
                             ),
-                            cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                            cursorBrush = SolidColor(
+                                MaterialTheme.colorScheme.primary
+                            ),
                             modifier = Modifier.fillMaxWidth(),
                             maxLines = 3,
-                            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
+                            keyboardOptions = KeyboardOptions(
+                                imeAction = ImeAction.Done
+                            )
                         )
                     }
                 }
@@ -229,21 +255,35 @@ fun CreateWorkoutScreen(
                 ) {
                     StatCard(
                         modifier = Modifier.weight(1f),
-                        icon = if (state.isTimerRunning) Icons.Default.Timer else Icons.Default.PlayArrow,
+                        icon = if (state.isTimerRunning) {
+                            Icons.Default.Timer
+                        } else {
+                            Icons.Default.PlayArrow
+                        },
                         label = "Duración",
-                        value = TimeFormatter.formatDuration(state.elapsedSeconds),
+                        value = TimeFormatter.formatDuration(
+                            state.elapsedSeconds
+                        ),
                         onClick = {
-                            if (state.isTimerRunning) viewModel.onPauseTimer()
-                            else viewModel.onResumeTimer()
+                            if (state.isTimerRunning) {
+                                viewModel.onPauseTimer()
+                            } else {
+                                viewModel.onResumeTimer()
+                            }
                         }
                     )
+
                     StatCard(
                         modifier = Modifier.weight(1f),
                         icon = Icons.Default.FitnessCenter,
                         label = "Volumen",
-                        value = WeightFormatter.formatCompact(totalVolume, state.weightUnit),
+                        value = WeightFormatter.formatCompact(
+                            totalVolume,
+                            state.weightUnit
+                        ),
                         iconTint = MaterialTheme.colorScheme.primary
                     )
+
                     StatCard(
                         modifier = Modifier.weight(1f),
                         icon = Icons.Default.Check,
@@ -256,13 +296,21 @@ fun CreateWorkoutScreen(
 
             if (state.exercises.isEmpty()) {
                 item {
-                    EmptyWorkoutState(onAddExercise = { viewModel.onShowExerciseDialog(true) })
+                    EmptyStateView(
+                        icon = Icons.Default.FitnessCenter,
+                        title = "No hay ejercicios todavía",
+                        subtitle = "Añade tu primer ejercicio para empezar el entreno"
+                    )
                 }
             }
 
             itemsIndexed(state.exercises) { index, exercise ->
                 val isThisExpanded = state.expandedSet?.first == index
-                val expandedSetIndex = if (isThisExpanded) state.expandedSet?.second else null
+                val expandedSetIndex = if (isThisExpanded) {
+                    state.expandedSet?.second
+                } else {
+                    null
+                }
 
                 // Convert the map of setIndex -> set to an ordered list of sets.
                 // If no previous data exists for this exercise, pass an empty list.
@@ -278,15 +326,33 @@ fun CreateWorkoutScreen(
                     isFirst = index == 0,
                     isLast = index == state.exercises.size - 1,
                     expandedSetIndex = expandedSetIndex,
-                    onToggleSetExpansion = { setIndex -> viewModel.onToggleSetExpansion(index, setIndex) },
-                    onRemoveExercise = { viewModel.onRemoveExercise(index) },
-                    onMoveUp = { viewModel.onMoveExercise(index, index - 1) },
-                    onMoveDown = { viewModel.onMoveExercise(index, index + 1) },
-                    onAddSet = { viewModel.onAddSet(index) },
-                    onRemoveSet = { setIndex -> viewModel.onRemoveSet(index, setIndex) },
-                    onSetChange = { setIndex, reps, weight -> viewModel.onSetChange(index, setIndex, reps, weight) },
-                    onToggleWarmup = { setIndex -> viewModel.onToggleWarmup(index, setIndex) },
-                    onToggleCheck = { setIndex -> viewModel.onToggleCheck(index, setIndex) },
+                    onToggleSetExpansion = { setIndex ->
+                        viewModel.onToggleSetExpansion(index, setIndex)
+                    },
+                    onRemoveExercise = {
+                        viewModel.onRemoveExercise(index)
+                    },
+                    onMoveUp = {
+                        viewModel.onMoveExercise(index, index - 1)
+                    },
+                    onMoveDown = {
+                        viewModel.onMoveExercise(index, index + 1)
+                    },
+                    onAddSet = {
+                        viewModel.onAddSet(index)
+                    },
+                    onRemoveSet = { setIndex ->
+                        viewModel.onRemoveSet(index, setIndex)
+                    },
+                    onSetChange = { setIndex, reps, weight ->
+                        viewModel.onSetChange(index, setIndex, reps, weight)
+                    },
+                    onToggleWarmup = { setIndex ->
+                        viewModel.onToggleWarmup(index, setIndex)
+                    },
+                    onToggleCheck = { setIndex ->
+                        viewModel.onToggleCheck(index, setIndex)
+                    },
                     previousSets = previousSets
                 )
             }
@@ -303,16 +369,26 @@ fun CreateWorkoutScreen(
                 onMuscleGroupSelect = viewModel::onMuscleGroupFilterChange,
                 onToggleSelection = viewModel::onToggleExerciseSelection,
                 onConfirm = viewModel::onConfirmAddExercises,
-                onDismiss = { viewModel.onShowExerciseDialog(false) }
+                onDismiss = {
+                    viewModel.onShowExerciseDialog(false)
+                }
             )
         }
     }
 
     if (showFinishDialog) {
         AlertDialog(
-            onDismissRequest = { showFinishDialog = false },
-            title = { Text("Finalizar entrenamiento") },
-            text = { Text("¿Estás seguro de que quieres finalizar el entrenamiento? Se guardará en tu perfil.") },
+            onDismissRequest = {
+                showFinishDialog = false
+            },
+            title = {
+                Text("Finalizar entrenamiento")
+            },
+            text = {
+                Text(
+                    "¿Estás seguro de que quieres finalizar el entrenamiento? Se guardará en tu perfil."
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -320,11 +396,18 @@ fun CreateWorkoutScreen(
                         viewModel.onFinishWorkout()
                     }
                 ) {
-                    Text("Finalizar", color = MaterialTheme.colorScheme.primary)
+                    Text(
+                        "Finalizar",
+                        color = MaterialTheme.colorScheme.primary
+                    )
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showFinishDialog = false }) {
+                TextButton(
+                    onClick = {
+                        showFinishDialog = false
+                    }
+                ) {
                     Text("Cancelar")
                 }
             }
@@ -333,9 +416,17 @@ fun CreateWorkoutScreen(
 
     if (showDiscardDialog) {
         AlertDialog(
-            onDismissRequest = { showDiscardDialog = false },
-            title = { Text("Descartar entrenamiento") },
-            text = { Text("¿Estás seguro de que quieres descartar el entrenamiento? Se perderán todos los datos.") },
+            onDismissRequest = {
+                showDiscardDialog = false
+            },
+            title = {
+                Text("Descartar entrenamiento")
+            },
+            text = {
+                Text(
+                    "¿Estás seguro de que quieres descartar el entrenamiento? Se perderán todos los datos."
+                )
+            },
             confirmButton = {
                 TextButton(
                     onClick = {
@@ -343,45 +434,21 @@ fun CreateWorkoutScreen(
                         viewModel.onDiscardWorkout()
                     }
                 ) {
-                    Text("Descartar", color = MaterialTheme.colorScheme.error)
+                    Text(
+                        "Descartar",
+                        color = MaterialTheme.colorScheme.error
+                    )
                 }
             },
             dismissButton = {
-                TextButton(onClick = { showDiscardDialog = false }) {
+                TextButton(
+                    onClick = {
+                        showDiscardDialog = false
+                    }
+                ) {
                     Text("Cancelar")
                 }
             }
-        )
-    }
-}
-
-@Composable
-private fun EmptyWorkoutState(onAddExercise: () -> Unit) {
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(vertical = 48.dp),
-        horizontalAlignment = Alignment.CenterHorizontally
-    ) {
-        Icon(
-            imageVector = Icons.Default.FitnessCenter,
-            contentDescription = null,
-            modifier = Modifier.size(64.dp),
-            tint = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.4f)
-        )
-        Spacer(modifier = Modifier.height(16.dp))
-        Text(
-            text = "No hay ejercicios todavía",
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.onSurface
-        )
-        Spacer(modifier = Modifier.height(4.dp))
-        Text(
-            text = "Añade tu primer ejercicio para empezar el entreno",
-            style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            textAlign = TextAlign.Center
         )
     }
 }
