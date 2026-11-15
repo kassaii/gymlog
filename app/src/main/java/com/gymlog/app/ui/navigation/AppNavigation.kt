@@ -88,7 +88,12 @@ fun AppNavigation(
             val workoutId = backStackEntry.arguments?.getString(Routes.WORKOUT_ID) ?: ""
             WorkoutDetailScreen(
                 workoutId = workoutId,
-                onBack = { navController.popBackStack() }
+                onBack = {
+                    navController.popBackStack()
+                },
+                onUserClick = { userId ->
+                    navController.navigate(Routes.userProfile(userId))
+                }
             )
         }
 

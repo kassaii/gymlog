@@ -3,6 +3,7 @@ package com.gymlog.app.ui.workout
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.gymlog.app.data.model.User
 import com.gymlog.app.data.model.Workout
 import com.gymlog.app.data.repository.AuthRepository
 import com.gymlog.app.data.repository.UserRepository
@@ -17,6 +18,7 @@ import kotlinx.coroutines.launch
 // Represents the current state of the workout detail screen
 data class WorkoutDetailUiState(
     val workout: Workout? = null,
+    val owner: User? = null,
     val isLoading: Boolean = true,
     val error: String? = null,
     val isDeleting: Boolean = false,
@@ -35,39 +37,62 @@ class WorkoutDetailViewModel : ViewModel() {
     private val _state = MutableStateFlow(WorkoutDetailUiState())
     val state: StateFlow<WorkoutDetailUiState> = _state.asStateFlow()
 
+    init {
+        observeWeightUnit()
+    }
+
     // Observes the current user's weight unit
     // and updates the screen when the preference changes
     private fun observeWeightUnit() {
         viewModelScope.launch {
             val uid = authRepository.getCurrentUserId() ?: return@launch
+
             userRepository.observeWeightUnit(uid).collectLatest { unit ->
                 _state.update { it.copy(weightUnit = unit) }
             }
         }
     }
 
-    // Loads a workout by its ID and updates the screen
-    // with its details or an error if loading fails
+    // Loads a workout and its owner
     fun loadWorkout(workoutId: String) {
         viewModelScope.launch {
-            _state.update { it.copy(isLoading = true, error = null) }
-
-            observeWeightUnit()
+            _state.update {
+                it.copy(
+                    workout = null,
+                    owner = null,
+                    isLoading = true,
+                    error = null
+                )
+            }
 
             val result = workoutRepository.getWorkoutById(workoutId)
 
             result.fold(
                 onSuccess = { workout ->
                     _state.update {
-                        it.copy(workout = workout, isLoading = false, error = null)
+                        it.copy(
+                            workout = workout,
+                            isLoading = false,
+                            error = null
+                        )
                     }
+
+                    // Load the public profile of the workout owner
+                    userRepository.getUserProfile(workout.userId)
+                        .onSuccess { user ->
+                            _state.update {
+                                it.copy(owner = user)
+                            }
+                        }
                 },
                 onFailure = { exception ->
                     _state.update {
                         it.copy(
                             workout = null,
+                            owner = null,
                             isLoading = false,
-                            error = exception.message ?: "Failed to load workout"
+                            error = exception.message
+                                ?: "Failed to load workout"
                         )
                     }
                 }
@@ -81,25 +106,40 @@ class WorkoutDetailViewModel : ViewModel() {
         if (_state.value.isDeleting) return
 
         val uid = authRepository.getCurrentUserId()
-        if (uid == null || _state.value.workout?.id != workoutId || _state.value.workout?.userId != uid) {
+
+        if (
+            uid == null ||
+            _state.value.workout?.id != workoutId ||
+            _state.value.workout?.userId != uid
+        ) {
             _state.update {
-                it.copy(deleteError = "No puedes eliminar este entrenamiento")
+                it.copy(
+                    deleteError = "No puedes eliminar este entrenamiento"
+                )
             }
             return
         }
 
         viewModelScope.launch {
-            _state.update { it.copy(isDeleting = true, deleteError = null) }
+            _state.update {
+                it.copy(isDeleting = true, deleteError = null)
+            }
 
             workoutRepository.deleteWorkout(workoutId)
                 .onSuccess {
                     _state.update {
-                        it.copy(isDeleting = false, deleteSuccess = true)
+                        it.copy(
+                            isDeleting = false,
+                            deleteSuccess = true
+                        )
                     }
                 }
                 .onFailure { e ->
                     _state.update {
-                        it.copy(isDeleting = false, deleteError = e.message)
+                        it.copy(
+                            isDeleting = false,
+                            deleteError = e.message
+                        )
                     }
                 }
         }
@@ -107,6 +147,8 @@ class WorkoutDetailViewModel : ViewModel() {
 
     // Resets the deletion success flag after the screen handles it
     fun onDeleteHandled() {
-        _state.update { it.copy(deleteSuccess = false) }
+        _state.update {
+            it.copy(deleteSuccess = false)
+        }
     }
 }
